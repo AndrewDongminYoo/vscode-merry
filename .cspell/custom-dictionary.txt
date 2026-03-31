@@ -1,8 +1,13 @@
 # Custom Dictionary Words
 amodio
 dbaeumer
+derry
 esbuild
+fvm
 gitmoji
+merry
+nfvm
+posttest
 pubspec
 vscodeignore
 yarnrc

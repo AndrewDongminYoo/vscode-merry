@@ -43,8 +43,10 @@ function detectViaDartGlobalList(): Promise<MerryCli | null> {
  * Parse `dart pub global list` output.
  * Each line is: "packageName version"
  * Returns "merry" immediately if found (priority), otherwise "derry" if found.
+ *
+ * Exported for unit testing.
  */
-function parseGlobalList(output: string): MerryCli | null {
+export function parseGlobalList(output: string): MerryCli | null {
   const lines = output.split("\n");
   let hasDerry = false;
 
