@@ -1,13 +1,21 @@
 import * as vscode from "vscode";
 import { MerryScriptsProvider } from "./merry-scripts-provider";
 import { ScriptItem } from "./script-item";
+import { detectMerryCli, MerryCli } from "./cli-detector";
 
 let terminal: vscode.Terminal | null = null;
+let activeCli: MerryCli | null = null;
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (!workspaceFolders || workspaceFolders.length === 0) {
     return;
+  }
+
+  activeCli = await detectMerryCli();
+
+  if (!activeCli) {
+    showInstallPrompt();
   }
 
   const workspaceRoot = workspaceFolders[0].uri.fsPath;
@@ -33,7 +41,11 @@ export function activate(context: vscode.ExtensionContext) {
         if (!item || item.node.isGroup) {
           return;
         }
-        runInTerminal(item.node.fullPath);
+        if (!activeCli) {
+          showInstallPrompt();
+          return;
+        }
+        runInTerminal(item.node.fullPath, activeCli);
       },
     ),
 
@@ -50,8 +62,8 @@ export function activate(context: vscode.ExtensionContext) {
   );
 }
 
-function runInTerminal(scriptPath: string): void {
-  const config = vscode.workspace.getConfiguration("vscode-merry");
+function runInTerminal(scriptPath: string, cli: MerryCli): void {
+  const config = vscode.workspace.getConfiguration("merry");
   const reuse = config.get<boolean>("reuseTerminal", false);
 
   if (reuse && terminal) {
@@ -61,7 +73,34 @@ function runInTerminal(scriptPath: string): void {
     terminal.show();
   }
 
-  terminal.sendText(`merry run ${scriptPath}`);
+  terminal.sendText(`${cli} run ${scriptPath}`);
+}
+
+function showInstallPrompt(): void {
+  const installAction = "Install merry";
+  const docsAction = "Open pub.dev";
+
+  vscode.window
+    .showInformationMessage(
+      "Merry Scripts: neither 'merry' nor 'derry' was found. Install merry to run scripts.",
+      installAction,
+      docsAction,
+    )
+    .then((choice) => {
+      if (choice === installAction) {
+        const t = vscode.window.createTerminal("Merry Install");
+        t.show();
+        t.sendText("dart pub global activate merry");
+        // Re-detect after a moment to update activeCli
+        setTimeout(async () => {
+          activeCli = await detectMerryCli();
+        }, 5000);
+      } else if (choice === docsAction) {
+        vscode.env.openExternal(
+          vscode.Uri.parse("https://pub.dev/packages/merry"),
+        );
+      }
+    });
 }
 
 export function deactivate() {
