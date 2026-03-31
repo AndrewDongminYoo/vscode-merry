@@ -1,3 +1,5 @@
+.cspell/**
+.trunk/**
 .vscode/**
 .vscode-test/**
 out/**
@@ -7,6 +9,7 @@ src/**
 .yarnrc
 esbuild.js
 vsc-extension-quickstart.md
+cspell.config.yaml
 **/tsconfig.json
 **/eslint.config.mjs
 **/*.map

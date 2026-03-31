@@ -1,0 +1,7 @@
+# Custom Dictionary Words
+amodio
+dbaeumer
+esbuild
+gitmoji
+vscodeignore
+yarnrc
