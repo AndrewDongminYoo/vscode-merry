@@ -10,8 +10,26 @@
     "vscode": "^1.110.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Snippets"
   ],
+  "keywords": [
+    "dart",
+    "flutter",
+    "merry",
+    "derry",
+    "scripts",
+    "task-runner"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AndrewDongminYoo/vscode-merry.git"
+  },
+  "bugs": {
+    "email": "ydm2790@gmail.com",
+    "url": "https://github.com/AndrewDongminYoo/vscode-merry/issues"
+  },
+  "homepage": "https://github.com/AndrewDongminYoo/vscode-merry#readme",
   "activationEvents": [
     "workspaceContains:pubspec.yaml",
     "workspaceContains:merry.yaml",
