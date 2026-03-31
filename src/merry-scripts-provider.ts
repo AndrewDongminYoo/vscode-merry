@@ -1,13 +1,21 @@
 import * as path from "path";
-import * as vscode from "vscode";
+import {
+  type Disposable,
+  EventEmitter,
+  type FileSystemWatcher,
+  RelativePattern,
+  type TreeDataProvider,
+  type TreeItem,
+  workspace,
+} from "vscode";
 
 import { parseMerryScripts, type ScriptNode } from "./merry-parser";
 import { ScriptItem } from "./script-item";
 
 export class MerryScriptsProvider
-  implements vscode.TreeDataProvider<ScriptItem>, vscode.Disposable
+  implements TreeDataProvider<ScriptItem>, Disposable
 {
-  private readonly _onDidChangeTreeData = new vscode.EventEmitter<
+  private readonly _onDidChangeTreeData = new EventEmitter<
     ScriptItem | undefined | null | void
   >();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
@@ -15,14 +23,14 @@ export class MerryScriptsProvider
   private nodes: ScriptNode[] = [];
   private scriptsFilePath: string | null = null;
 
-  private readonly pubspecWatcher: vscode.FileSystemWatcher;
-  private externalFileWatcher: vscode.FileSystemWatcher | null = null;
+  private readonly pubspecWatcher: FileSystemWatcher;
+  private externalFileWatcher: FileSystemWatcher | null = null;
 
-  private readonly disposables: vscode.Disposable[] = [];
+  private readonly disposables: Disposable[] = [];
 
   constructor(private readonly workspaceRoot: string) {
-    this.pubspecWatcher = vscode.workspace.createFileSystemWatcher(
-      new vscode.RelativePattern(workspaceRoot, "pubspec.yaml"),
+    this.pubspecWatcher = workspace.createFileSystemWatcher(
+      new RelativePattern(workspaceRoot, "pubspec.yaml"),
     );
     const onPubspecChange = () => this.reload();
     this.pubspecWatcher.onDidChange(onPubspecChange, this, this.disposables);
@@ -56,7 +64,7 @@ export class MerryScriptsProvider
 
       // If scripts are in an external file, watch it too
       if (result.scriptsFilePath !== pubspecPath) {
-        this.externalFileWatcher = vscode.workspace.createFileSystemWatcher(
+        this.externalFileWatcher = workspace.createFileSystemWatcher(
           result.scriptsFilePath,
         );
         const onExternalChange = () => this.reload();
@@ -70,7 +78,7 @@ export class MerryScriptsProvider
     this._onDidChangeTreeData.fire();
   }
 
-  getTreeItem(element: ScriptItem): vscode.TreeItem {
+  getTreeItem(element: ScriptItem): TreeItem {
     return element;
   }
 
