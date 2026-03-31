@@ -5,6 +5,7 @@ import { detectMerryCli, CliInfo, MerryCli } from "./cli-detector";
 
 let terminal: vscode.Terminal | null = null;
 let activeCli: MerryCli | null = null;
+let cliStatusBarItem: vscode.StatusBarItem | null = null;
 
 export async function activate(context: vscode.ExtensionContext) {
   const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -12,9 +13,16 @@ export async function activate(context: vscode.ExtensionContext) {
     return;
   }
 
+  context.subscriptions.push(
+    vscode.commands.registerCommand("vscode-merry.installCli", () => {
+      showInstallPrompt();
+    }),
+  );
+
   const cliInfo = await detectMerryCli();
 
   if (!cliInfo) {
+    showCliMissingStatusBar(context);
     showInstallPrompt();
   } else {
     activeCli = cliInfo.cli;
@@ -65,6 +73,24 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 }
 
+function showCliMissingStatusBar(context: vscode.ExtensionContext): void {
+  if (cliStatusBarItem) {
+    cliStatusBarItem.show();
+    return;
+  }
+
+  cliStatusBarItem = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Left,
+    100,
+  );
+  cliStatusBarItem.text = "$(warning) Merry: CLI not found";
+  cliStatusBarItem.tooltip =
+    "merry (or derry) is not installed. Click to install.";
+  cliStatusBarItem.command = "vscode-merry.installCli";
+  cliStatusBarItem.show();
+  context.subscriptions.push(cliStatusBarItem);
+}
+
 function runInTerminal(scriptPath: string, cli: MerryCli): void {
   const config = vscode.workspace.getConfiguration("merry");
   const reuse = config.get<boolean>("reuseTerminal", false);
@@ -107,6 +133,10 @@ function showInstallPrompt(): void {
           const info = await detectMerryCli();
           if (info) {
             activeCli = info.cli;
+            if (cliStatusBarItem) {
+              cliStatusBarItem.dispose();
+              cliStatusBarItem = null;
+            }
             showCliDetectedMessage(info);
           }
         }, 5000);
@@ -122,5 +152,9 @@ export function deactivate() {
   if (terminal) {
     terminal.dispose();
     terminal = null;
+  }
+  if (cliStatusBarItem) {
+    cliStatusBarItem.dispose();
+    cliStatusBarItem = null;
   }
 }

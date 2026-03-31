@@ -68,6 +68,7 @@ suite("Integration: Merry Scripts View", () => {
     const cmds = await vscode.commands.getCommands(false);
     assert.ok(cmds.includes("vscode-merry.runScript"), "runScript command");
     assert.ok(cmds.includes("vscode-merry.refresh"), "refresh command");
+    assert.ok(cmds.includes("vscode-merry.installCli"), "installCli command");
     assert.ok(
       cmds.includes("vscode-merry.openScriptSource"),
       "openScriptSource command",
