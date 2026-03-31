@@ -1,8 +1,11 @@
 {
   "name": "vscode-merry",
   "displayName": "Merry Scripts",
-  "description": "An extension that lets you view the merry (a.k.a. derry) script at a glance in the VSCode sidebar and run it with a single click",
+  "description": "Discover and run merry/derry scripts directly from the VS Code Explorer.",
   "version": "0.0.1",
+  "publisher": "dongminyu",
+  "author": "Dongmin Yu <ydm2790@gmail.com> (https://github.com/AndrewDongminYoo)",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.110.0"
   },

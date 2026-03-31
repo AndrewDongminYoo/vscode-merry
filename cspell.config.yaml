@@ -6,6 +6,6 @@ dictionaryDefinitions:
     addWords: true
 dictionaries:
   - custom-dictionary
-words: []
+words: [Dongmin, dongminyu]
 ignoreWords: []
 import: []
