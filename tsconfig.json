@@ -4,11 +4,15 @@
     "target": "ES2022",
     "lib": ["ES2022"],
     "sourceMap": true,
-    "rootDir": "src",
-    "strict": true /* enable all strict type-checking options */
+    "strict": true /* enable all strict type-checking options */,
     /* Additional Checks */
-    // "noImplicitReturns": true, /* Report error when not all code paths in function return a value. */
-    // "noFallthroughCasesInSwitch": true, /* Report errors for fallthrough cases in switch statement. */
-    // "noUnusedParameters": true,  /* Report errors on unused parameters. */
-  }
+    "alwaysStrict": true,
+    "noFallthroughCasesInSwitch": true /* Report errors for fallthrough cases in switch statement. */,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "noImplicitReturns": true /* Report error when not all code paths in function return a value. */,
+    "noUnusedParameters": true /* Report errors on unused parameters. */,
+    "noUnusedLocals": true
+  },
+  "exclude": ["node_modules"]
 }
