@@ -8,8 +8,13 @@ let activeCli: MerryCli | null = null;
 let cliStatusBarItem: vscode.StatusBarItem | null = null;
 
 export async function activate(context: vscode.ExtensionContext) {
+  // Use the console to output diagnostic information (console.log) and errors (console.error)
+  // This line of code will only be executed once when your extension is activated
+  console.log('Your extension "vscode-merry" is now active!');
+
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (!workspaceFolders || workspaceFolders.length === 0) {
+    vscode.window.showInformationMessage("No workspace are activated.");
     return;
   }
 
@@ -92,7 +97,7 @@ function showCliMissingStatusBar(context: vscode.ExtensionContext): void {
 }
 
 function runInTerminal(scriptPath: string, cli: MerryCli): void {
-  const config = vscode.workspace.getConfiguration("merry");
+  const config = vscode.workspace.getConfiguration("vscode-merry");
   const reuse = config.get<boolean>("reuseTerminal", false);
 
   if (reuse && terminal) {

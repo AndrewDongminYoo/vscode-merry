@@ -35,9 +35,9 @@ dart pub global activate merry
 
 This extension contributes the following settings:
 
-- `merry.enable`
+- `vscode-merry.enable`
   - Enable or disable the extension.
-- `merry.reuseTerminal`
+- `vscode-merry.reuseTerminal`
   - Reuse an existing "Merry Scripts" terminal instead of creating a new terminal per run.
 
 ## Known Issues

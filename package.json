@@ -97,12 +97,12 @@
       "type": "object",
       "title": "Merry Scripts",
       "properties": {
-        "merry.enable": {
+        "vscode-merry.enable": {
           "type": "boolean",
           "default": true,
           "description": "Enable the Merry Scripts extension."
         },
-        "merry.reuseTerminal": {
+        "vscode-merry.reuseTerminal": {
           "type": "boolean",
           "default": false,
           "description": "Reuse an existing Merry terminal instead of creating a new one each time."

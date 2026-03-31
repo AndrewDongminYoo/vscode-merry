@@ -151,8 +151,8 @@ class MerryScriptsProvider implements vscode.TreeDataProvider<ScriptItem> {
 
 **contributes.configuration:**
 
-- `merry.reuseTerminal`: boolean, default `false`
-- `merry.enable`: boolean, default `true`
+- `vscode-merry.reuseTerminal`: boolean, default `false`
+- `vscode-merry.enable`: boolean, default `true`
 
 ### `src/extension.ts` Changes
 
