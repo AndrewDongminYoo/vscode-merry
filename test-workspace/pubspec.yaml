@@ -1,0 +1,10 @@
+name: merry_test_workspace
+description: Test workspace for the vscode-merry extension.
+version: 0.1.0
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+# Points to an external scripts file — one of the two supported formats.
+# To test inline scripts, replace this line with a `scripts:` map directly.
+scripts: merry.yaml

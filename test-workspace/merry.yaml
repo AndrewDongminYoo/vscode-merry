@@ -1,0 +1,50 @@
+# merry.yaml — comprehensive example covering all merry script features.
+# This file is referenced from pubspec.yaml via: scripts: merry.yaml
+
+# ── Simple string commands ─────────────────────────────────────
+test: flutter test
+analyze: flutter analyze
+format: dart format .
+
+# ── List of commands ──────────────────────────────────────────
+clean:
+  - flutter clean
+  - flutter pub get
+
+# ── Pre/post hooks (run automatically with `merry run test`) ──
+pretest: flutter clean
+posttest: echo "✓ Test run complete"
+
+# ── Definition with description and workdir ───────────────────
+gen:
+  (description): Run build_runner code generation
+  (scripts): dart run build_runner build --delete-conflicting-outputs
+
+# ── Definition with list scripts ──────────────────────────────
+publish:
+  (description): Dry-run publish check
+  (scripts):
+    - $gen
+    - $test
+    - dart pub publish --dry-run
+
+# ── Nested group (build platform targets) ─────────────────────
+build:
+  android:
+    - flutter build apk --release
+    - echo "APK saved to build/app/outputs/apk/release/"
+  ios: flutter build ios --release --no-codesign
+  web: flutter build web --release
+
+# ── Platform-specific scripts ─────────────────────────────────
+run:
+  (linux): flutter run -d linux
+  (macos): flutter run -d macos
+  (windows): flutter run -d windows
+
+# ── Aliases ───────────────────────────────────────────────────
+upgrade:
+  (description): Upgrade all pub dependencies
+  (scripts): flutter pub upgrade --major-versions
+  (aliases):
+    - up
