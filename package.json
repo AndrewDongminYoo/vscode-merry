@@ -9,15 +9,85 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "workspaceContains:pubspec.yaml",
+    "workspaceContains:merry.yaml",
+    "workspaceContains:derry.yaml"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "vscode-merry.helloWorld",
-        "title": "Hello World"
+        "command": "vscode-merry.runScript",
+        "title": "Run Script",
+        "category": "Merry",
+        "icon": "$(play)"
+      },
+      {
+        "command": "vscode-merry.refresh",
+        "title": "Refresh Scripts",
+        "category": "Merry",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "vscode-merry.openScriptSource",
+        "title": "Open Script Source",
+        "category": "Merry",
+        "icon": "$(go-to-file)"
       }
-    ]
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "merryScripts",
+          "name": "Merry Scripts",
+          "when": "workspaceContains:pubspec.yaml || workspaceContains:merry.yaml || workspaceContains:derry.yaml",
+          "icon": "$(run-all)"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "vscode-merry.refresh",
+          "when": "view == merryScripts",
+          "group": "navigation"
+        },
+        {
+          "command": "vscode-merry.openScriptSource",
+          "when": "view == merryScripts",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "vscode-merry.runScript",
+          "when": "view == merryScripts && viewItem == script",
+          "group": "inline"
+        },
+        {
+          "command": "vscode-merry.runScript",
+          "when": "view == merryScripts && viewItem == script",
+          "group": "merry@1"
+        }
+      ]
+    },
+    "configuration": {
+      "type": "object",
+      "title": "Merry Scripts",
+      "properties": {
+        "merry.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the Merry Scripts extension."
+        },
+        "merry.reuseTerminal": {
+          "type": "boolean",
+          "default": false,
+          "description": "Reuse an existing Merry terminal instead of creating a new one each time."
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "pnpm run package",
