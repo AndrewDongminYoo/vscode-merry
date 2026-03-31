@@ -31,7 +31,7 @@ To run tests in Extension Development Host, press `F5` in VS Code.
 
 ### Source modules
 
-Source files use **kebab-case** naming (enforced by linter).
+Runtime source files use **kebab-case** naming by convention. Tests intentionally live under `src/test/` rather than a top-level `test/` directory to match the current VS Code extension / VSIX workflow.
 
 | File                            | Role                                                                     |
 | ------------------------------- | ------------------------------------------------------------------------ |
@@ -97,6 +97,11 @@ All VS Code contributions (commands, views, settings) are declared in `package.j
 ### Testing
 
 Tests live in `src/test/` and run inside an actual VS Code instance via `@vscode/test-electron`. Compiled test output goes to `out/`. The test runner (`vscode-test`) spawns VS Code, loads the extension, and executes Mocha suites.
+
+- `src/test/integration.test.ts` exercises activation, command registration, provider behavior, and tree rendering against the committed `test-workspace/` fixture.
+- `src/test/merry-parser.test.ts` covers parser semantics and YAML edge cases.
+- `src/test/cli-detector.test.ts` covers `dart pub global list` parsing and merry-vs-derry preference.
+- `src/test/extension.test.ts` is still mostly the scaffold sample test and should not be treated as sufficient coverage by itself.
 
 ## Key constraints (from `PLAN.md`)
 

@@ -1,38 +1,27 @@
 # Style and conventions for vscode-merry
 
-## Language and typing
+## Language and formatting
 
-- TypeScript project with `strict: true` and additional strictness flags (`noImplicitAny`, `noUnusedLocals`, `noUnusedParameters`, `noImplicitReturns`, `noFallthroughCasesInSwitch`).
-- Prefer explicit, narrow types for VS Code state such as `vscode.Terminal | null`.
-- Keep functions small and direct; the code favors straightforward control flow over heavy abstraction.
+- TypeScript project with `strict: true` and additional no-implicit / no-unused checks.
+- Double quotes, semicolons, trailing commas, and early-return guards are the prevailing style.
+- Keep comments sparse and purposeful.
 
-## Naming and file layout
+## Naming and layout
 
-- Source filenames use kebab-case: `merry-parser.ts`, `merry-scripts-provider.ts`, `script-item.ts`.
-- Classes/interfaces/types use PascalCase: `MerryScriptsProvider`, `ScriptItem`, `ScriptNode`, `ParseResult`.
-- Functions, locals, and module-level state use camelCase.
+- Runtime source files use kebab-case by convention.
+- Classes, interfaces, and types use PascalCase.
+- Functions, locals, and module state use camelCase.
+- Tests live in `src/test/` by design; do not assume a root `test/` directory.
 - VS Code command ids use the `vscode-merry.*` namespace.
 
-## Formatting patterns seen in the codebase
+## Architectural conventions
 
-- Double quotes, semicolons, and trailing commas are used consistently.
-- Early-return guard clauses are common.
-- Comments are sparse and should stay purposeful; only add short clarifying comments where the code is not obvious.
-- Small inline callbacks for command registration and event handlers are acceptable.
+- Keep parser logic independent from VS Code APIs so it remains unit-testable.
+- Preserve the `merry`-before-`derry` preference when both CLIs are available.
+- Preserve space-delimited nested script paths such as `build android`.
+- Treat `test-workspace/` as stable test input, not a scratch directory.
 
-## Lint rules called out by config
+## Lint facts
 
-- Enforce/warn on import naming convention using camelCase or PascalCase.
-- Warn on missing curly braces.
-- Warn on non-strict equality (`eqeqeq`).
-- Warn on throwing literals.
-- Warn on missing semicolons.
-
-## Domain-specific parser rules worth preserving
-
-- `scripts: string` means load scripts from an external YAML file.
-- `scripts: map` means parse inline script definitions.
-- Map entries with `(scripts)` are leaf scripts with metadata like `(description)` and `(workdir)`.
-- Map entries without `(scripts)` are groups.
-- Keys matching `/^\(\w+\)$/` are metadata and should not become script nodes.
-- Nested script execution paths are space-delimited.
+- ESLint warns on import naming convention, missing curly braces, non-strict equality, literal throws, and missing semicolons.
+- File naming is currently a convention, not a rule enforced by ESLint.

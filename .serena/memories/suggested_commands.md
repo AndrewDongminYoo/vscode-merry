@@ -1,31 +1,26 @@
 # Suggested commands for vscode-merry
 
-## Setup and install
+## Setup
 
 - `pnpm install` — install dependencies.
 
-## Build and verification
+## Core verification
 
-- `pnpm run check-types` — strict TypeScript check without emitting files.
-- `pnpm run lint` — lint `src/` with ESLint.
-- `pnpm run compile` — runs type-check + lint + dev bundle build.
-- `pnpm run package` — runs type-check + lint + production bundle build.
-- `pnpm run test` — compiles tests + extension, lints, then launches `vscode-test`.
+- `pnpm run check-types` — strict TypeScript type-check.
+- `pnpm run lint` — lint runtime code under `src/`.
+- `pnpm run compile` — standard local verification: type-check + lint + dev bundle.
+- `pnpm run package` — production bundle verification.
+- `pnpm run test` — compile tests, compile extension, lint, then run `vscode-test`.
 
-## Watch / local development
+## Active development
 
-- `pnpm run watch` — parallel esbuild watch + `tsc --watch`.
-- `pnpm run watch-tests` — watch test compilation to `out/`.
-- `node esbuild.js --watch` — direct esbuild watch if you only need bundling.
-- In VS Code, press `F5` to launch an Extension Development Host for manual smoke testing.
+- `pnpm run watch` — esbuild watch plus `tsc --watch`.
+- `pnpm run watch-tests` — test compilation watch.
+- `node esbuild.js --watch` — bundler-only watch.
+- `F5` in VS Code — launch an Extension Development Host for smoke testing.
 
-## Useful repo inspection commands on macOS
+## When to use what
 
-- `git status`
-- `git diff --stat`
-- `rg pattern src test`
-- `rg --files src test`
-- `find . -name 'AGENTS.md' -o -name 'CLAUDE.md'`
-- `ls`
-- `cd <path>`
-- `sed -n '1,200p' <file>`
+- Parser-only or helper changes: start with `pnpm run check-types`, `pnpm run lint`, and targeted test awareness.
+- Provider, activation, command, or manifest changes: finish with `pnpm run test` and a manual `F5` smoke test.
+- Release-oriented bundle changes: include `pnpm run package`.
