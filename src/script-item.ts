@@ -1,0 +1,47 @@
+import * as vscode from "vscode";
+import { ScriptNode } from "./merry-parser";
+
+export class ScriptItem extends vscode.TreeItem {
+  readonly node: ScriptNode;
+
+  constructor(node: ScriptNode) {
+    const collapsible = node.isGroup
+      ? vscode.TreeItemCollapsibleState.Collapsed
+      : vscode.TreeItemCollapsibleState.None;
+
+    super(node.label, collapsible);
+
+    this.node = node;
+
+    if (node.isGroup) {
+      this.iconPath = new vscode.ThemeIcon("folder");
+      this.contextValue = "scriptGroup";
+    } else {
+      this.iconPath = new vscode.ThemeIcon(
+        node.isHook ? "arrow-right" : "play",
+      );
+      this.contextValue = "script";
+
+      const displayCmd =
+        node.description ?? (node.commands.length > 0 ? node.commands[0] : "");
+      this.description = displayCmd;
+
+      this.tooltip = new vscode.MarkdownString(
+        [
+          `**${node.fullPath}**`,
+          ...(node.description ? [`_${node.description}_`] : []),
+          "```",
+          node.commands.join("\n"),
+          "```",
+          ...(node.workdir ? [`workdir: \`${node.workdir}\``] : []),
+        ].join("\n\n"),
+      );
+
+      this.command = {
+        title: "Run Script",
+        command: "vscode-merry.runScript",
+        arguments: [this],
+      };
+    }
+  }
+}
