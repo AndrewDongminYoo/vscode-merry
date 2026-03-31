@@ -3,5 +3,6 @@ amodio
 dbaeumer
 esbuild
 gitmoji
+pubspec
 vscodeignore
 yarnrc
