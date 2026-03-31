@@ -31,12 +31,15 @@ To run tests in Extension Development Host, press `F5` in VS Code.
 
 ### Source modules
 
-| File                          | Role                                                           |
-| ----------------------------- | -------------------------------------------------------------- |
-| `src/extension.ts`            | `activate`/`deactivate`, command registration, terminal runner |
-| `src/merryParser.ts`          | YAML parsing → `ScriptNode[]` tree                             |
-| `src/scriptItem.ts`           | `vscode.TreeItem` subclass                                     |
-| `src/merryScriptsProvider.ts` | `TreeDataProvider<ScriptItem>` with `FileSystemWatcher`        |
+Source files use **kebab-case** naming (enforced by linter).
+
+| File                            | Role                                                                     |
+| ------------------------------- | ------------------------------------------------------------------------ |
+| `src/extension.ts`              | `activate`/`deactivate`, command registration, terminal runner           |
+| `src/cli-detector.ts`           | Detects `merry`/`derry` CLI via `dart pub global list` (merry preferred) |
+| `src/merry-parser.ts`           | YAML parsing → `ScriptNode[]` tree                                       |
+| `src/script-item.ts`            | `vscode.TreeItem` subclass                                               |
+| `src/merry-scripts-provider.ts` | `TreeDataProvider<ScriptItem>` with `FileSystemWatcher`                  |
 
 ### merry YAML parsing rules (critical)
 
@@ -59,19 +62,28 @@ Each entry in the scripts map:
 ### Data flow
 
 ```log
-pubspec.yaml  ──parseMerryScripts()──▶  ScriptNode[]
-                  (merryParser.ts)           │
-                                       ScriptItem[]
-                                       (scriptItem.ts)
-                                             │
-                                    TreeDataProvider
-                                  (merryScriptsProvider.ts)
-                                             │
-                                        VS Code sidebar
-                                             │
-                              vscode-merry.runScript command
-                                             │
-                              merry run <fullPath>  ← integrated terminal
+activate()
+  └→ detectMerryCli()              (cli-detector.ts)
+       ├→ dart pub global list     merry > derry priority
+       └→ ~/.pub-cache fallback    when dart not on PATH
+             │
+             ├─ null → showInstallPrompt()
+             │          ├─ "Install merry" → terminal: dart pub global activate merry
+             │          └─ "Open pub.dev"  → browser: pub.dev/packages/merry
+             │
+             └─ "merry"|"derry"
+                    │
+pubspec.yaml  ──parseMerryScripts()──▶  ScriptNode[]   (merry-parser.ts)
+                                              │
+                                        ScriptItem[]   (script-item.ts)
+                                              │
+                                     TreeDataProvider  (merry-scripts-provider.ts)
+                                              │
+                                         VS Code sidebar
+                                              │
+                               vscode-merry.runScript command
+                                              │
+                               <cli> run <fullPath>  ← integrated terminal
 ```
 
 ### FileSystemWatcher strategy
