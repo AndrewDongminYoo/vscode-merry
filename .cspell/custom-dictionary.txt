@@ -1,5 +1,6 @@
 # Custom Dictionary Words
 amodio
+codesign
 dbaeumer
 derry
 esbuild

@@ -172,7 +172,12 @@ export async function parseMerryScripts(
     return null;
   }
 
-  const doc = yaml.load(pubspecContent) as YamlMap | null;
+  let doc: YamlMap | null;
+  try {
+    doc = yaml.load(pubspecContent) as YamlMap | null;
+  } catch {
+    return null;
+  }
   if (!doc || typeof doc !== "object") {
     return null;
   }
@@ -191,7 +196,12 @@ export async function parseMerryScripts(
     } catch {
       return null;
     }
-    const externalDoc = yaml.load(externalContent) as YamlMap | null;
+    let externalDoc: YamlMap | null;
+    try {
+      externalDoc = yaml.load(externalContent) as YamlMap | null;
+    } catch {
+      return null;
+    }
     if (!externalDoc || typeof externalDoc !== "object") {
       return null;
     }
