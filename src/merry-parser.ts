@@ -1,6 +1,6 @@
 import * as fs from "fs";
-import * as path from "path";
 import * as yaml from "js-yaml";
+import * as path from "path";
 
 /** Regex matching merry meta-keys like (scripts), (description), (workdir), etc. */
 const META_KEY_RE = /^\(\w+\)$/;

@@ -1,18 +1,18 @@
-import { MerryScriptsProvider } from "./merry-scripts-provider";
-import { ScriptItem } from "./script-item";
-import { detectMerryCli, CliInfo, MerryCli } from "./cli-detector";
-
 import {
-  window,
   commands,
-  workspace,
-  ExtensionContext,
-  Terminal,
-  Uri,
   env,
-  StatusBarItem,
+  type ExtensionContext,
   StatusBarAlignment,
+  type StatusBarItem,
+  type Terminal,
+  Uri,
+  window,
+  workspace,
 } from "vscode";
+
+import { type CliInfo, detectMerryCli, type MerryCli } from "./cli-detector";
+import { MerryScriptsProvider } from "./merry-scripts-provider";
+import type { ScriptItem } from "./script-item";
 
 let terminal: Terminal | null = null;
 let activeCli: MerryCli | null = null;

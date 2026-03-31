@@ -2,7 +2,8 @@ import * as assert from "assert";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { parseMerryScripts, ScriptNode } from "../merry-parser";
+
+import { parseMerryScripts, type ScriptNode } from "../merry-parser";
 
 suite("MerryParser", () => {
   let tmpDir: string;

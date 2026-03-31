@@ -1,7 +1,8 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
+
 import { MerryScriptsProvider } from "../merry-scripts-provider";
-import { ScriptItem } from "../script-item";
+import type { ScriptItem } from "../script-item";
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 

@@ -1,6 +1,7 @@
-import * as vscode from "vscode";
 import * as path from "path";
-import { parseMerryScripts, ScriptNode } from "./merry-parser";
+import * as vscode from "vscode";
+
+import { parseMerryScripts, type ScriptNode } from "./merry-parser";
 import { ScriptItem } from "./script-item";
 
 export class MerryScriptsProvider

@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
-import { ScriptNode } from "./merry-parser";
+
+import type { ScriptNode } from "./merry-parser";
 
 export class ScriptItem extends vscode.TreeItem {
   readonly node: ScriptNode;
