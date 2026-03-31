@@ -1,18 +1,28 @@
-import typescriptEslint from "typescript-eslint";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-export default [
+import ts from "typescript-eslint";
+import importSort from "eslint-plugin-simple-import-sort";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const config = [
   {
     files: ["**/*.ts"],
-  },
-  {
     plugins: {
-      "@typescript-eslint": typescriptEslint.plugin,
+      "@typescript-eslint": ts.plugin,
+      "simple-import-sort": importSort,
     },
 
     languageOptions: {
-      parser: typescriptEslint.parser,
+      parser: ts.parser,
       ecmaVersion: 2022,
       sourceType: "module",
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: __dirname,
+      },
     },
 
     rules: {
@@ -23,11 +33,30 @@ export default [
           format: ["camelCase", "PascalCase"],
         },
       ],
-
-      curly: "warn",
-      eqeqeq: "warn",
-      "no-throw-literal": "warn",
-      semi: "warn",
+      "@typescript-eslint/consistent-type-imports": [
+        "error",
+        {
+          prefer: "type-imports",
+          fixStyle: "inline-type-imports",
+        },
+      ],
+      "@typescript-eslint/no-import-type-side-effects": "error",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          args: "all",
+          argsIgnorePattern: "^_",
+          caughtErrors: "all",
+          caughtErrorsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          ignoreRestSiblings: true,
+        },
+      ],
+      "simple-import-sort/imports": "error",
+      "simple-import-sort/exports": "error",
     },
   },
 ];
+
+export default config;
