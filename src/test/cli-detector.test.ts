@@ -3,28 +3,39 @@ import { parseGlobalList } from "../cli-detector";
 
 suite("CliDetector › parseGlobalList", () => {
   test("returns merry when present", () => {
-    const output = "flutter_tools 0.0.0\nmerry 2.0.0\nsome_package 1.0.0\n";
-    assert.strictEqual(parseGlobalList(output), "merry");
+    const result = parseGlobalList(
+      "flutter_tools 0.0.0\nmerry 2.0.0\nsome_package 1.0.0\n",
+    );
+    assert.strictEqual(result?.cli, "merry");
+    assert.strictEqual(result?.version, "2.0.0");
   });
 
   test("returns derry when only derry is present", () => {
-    const output = "flutter_tools 0.0.0\nderry 0.1.6\nsome_package 1.0.0\n";
-    assert.strictEqual(parseGlobalList(output), "derry");
+    const result = parseGlobalList(
+      "flutter_tools 0.0.0\nderry 0.1.6\nsome_package 1.0.0\n",
+    );
+    assert.strictEqual(result?.cli, "derry");
+    assert.strictEqual(result?.version, "0.1.6");
   });
 
   test("prefers merry over derry when both present", () => {
-    const output = "derry 0.1.6\nmerry 2.0.0\n";
-    assert.strictEqual(parseGlobalList(output), "merry");
+    const result = parseGlobalList("derry 0.1.6\nmerry 2.0.0\n");
+    assert.strictEqual(result?.cli, "merry");
+    assert.strictEqual(result?.version, "2.0.0");
   });
 
   test("prefers merry regardless of order", () => {
-    const output = "merry 2.0.0\nderry 0.1.6\n";
-    assert.strictEqual(parseGlobalList(output), "merry");
+    const result = parseGlobalList("merry 2.0.0\nderry 0.1.6\n");
+    assert.strictEqual(result?.cli, "merry");
   });
 
   test("returns null when neither merry nor derry found", () => {
-    const output = "flutter_tools 0.0.0\nfvm 3.0.0\nglobal_packages 1.0.0\n";
-    assert.strictEqual(parseGlobalList(output), null);
+    assert.strictEqual(
+      parseGlobalList(
+        "flutter_tools 0.0.0\nfvm 3.0.0\nglobal_packages 1.0.0\n",
+      ),
+      null,
+    );
   });
 
   test("returns null for empty output", () => {
@@ -37,17 +48,20 @@ suite("CliDetector › parseGlobalList", () => {
 
   test("handles partial name matches without false positives", () => {
     // 'merry-extra' and 'derry-fork' must not match
-    const output = "merry-extra 1.0.0\nderry-fork 0.5.0\n";
-    assert.strictEqual(parseGlobalList(output), null);
+    assert.strictEqual(
+      parseGlobalList("merry-extra 1.0.0\nderry-fork 0.5.0\n"),
+      null,
+    );
   });
 
   test("handles leading/trailing whitespace on each line", () => {
-    const output = "  merry 2.0.0  \n";
-    assert.strictEqual(parseGlobalList(output), "merry");
+    const result = parseGlobalList("  merry 2.0.0  \n");
+    assert.strictEqual(result?.cli, "merry");
+    assert.strictEqual(result?.version, "2.0.0");
   });
 
   test("handles Windows-style CRLF line endings", () => {
-    const output = "flutter_tools 0.0.0\r\nmerry 2.0.0\r\n";
-    assert.strictEqual(parseGlobalList(output), "merry");
+    const result = parseGlobalList("flutter_tools 0.0.0\r\nmerry 2.0.0\r\n");
+    assert.strictEqual(result?.cli, "merry");
   });
 });

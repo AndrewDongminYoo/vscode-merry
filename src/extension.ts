@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { MerryScriptsProvider } from "./merry-scripts-provider";
 import { ScriptItem } from "./script-item";
-import { detectMerryCli, MerryCli } from "./cli-detector";
+import { detectMerryCli, CliInfo, MerryCli } from "./cli-detector";
 
 let terminal: vscode.Terminal | null = null;
 let activeCli: MerryCli | null = null;
@@ -12,10 +12,13 @@ export async function activate(context: vscode.ExtensionContext) {
     return;
   }
 
-  activeCli = await detectMerryCli();
+  const cliInfo = await detectMerryCli();
 
-  if (!activeCli) {
+  if (!cliInfo) {
     showInstallPrompt();
+  } else {
+    activeCli = cliInfo.cli;
+    showCliDetectedMessage(cliInfo);
   }
 
   const workspaceRoot = workspaceFolders[0].uri.fsPath;
@@ -76,6 +79,14 @@ function runInTerminal(scriptPath: string, cli: MerryCli): void {
   terminal.sendText(`${cli} run ${scriptPath}`);
 }
 
+function showCliDetectedMessage(info: CliInfo): void {
+  const versionPart = info.version ? ` v${info.version}` : "";
+  const pathPart = info.binPath ? ` — ${info.binPath}` : "";
+  vscode.window.showInformationMessage(
+    `Merry Scripts: '${info.cli}'${versionPart} detected${pathPart}`,
+  );
+}
+
 function showInstallPrompt(): void {
   const installAction = "Install merry";
   const docsAction = "Open pub.dev";
@@ -91,9 +102,13 @@ function showInstallPrompt(): void {
         const t = vscode.window.createTerminal("Merry Install");
         t.show();
         t.sendText("dart pub global activate merry");
-        // Re-detect after a moment to update activeCli
+        // Re-detect after install completes
         setTimeout(async () => {
-          activeCli = await detectMerryCli();
+          const info = await detectMerryCli();
+          if (info) {
+            activeCli = info.cli;
+            showCliDetectedMessage(info);
+          }
         }, 5000);
       } else if (choice === docsAction) {
         vscode.env.openExternal(
