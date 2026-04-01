@@ -48,10 +48,8 @@ export async function activate(context: ExtensionContext) {
   });
 
   const updateTreeMessage = () => {
-    treeView.message =
-      provider.getNodes().length === 0
-        ? "No merry scripts found. Add a `scripts:` field to pubspec.yaml."
-        : undefined;
+    const msg = provider.getStatusMessage();
+    treeView.message = msg.length > 0 ? msg : undefined;
   };
   updateTreeMessage();
   provider.onDidChangeTreeData(updateTreeMessage);

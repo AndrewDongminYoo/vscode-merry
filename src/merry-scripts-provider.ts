@@ -1,3 +1,4 @@
+import * as fs from "fs";
 import * as path from "path";
 import {
   type Disposable,
@@ -12,6 +13,9 @@ import {
 import { parseMerryScripts, type ScriptNode } from "./merry-parser";
 import { ScriptItem } from "./script-item";
 
+/** Candidate script file names that merry/derry conventionally use. */
+const SCRIPT_FILE_CANDIDATES = ["merry.yaml", "derry.yaml"];
+
 export class MerryScriptsProvider
   implements TreeDataProvider<ScriptItem>, Disposable
 {
@@ -22,6 +26,7 @@ export class MerryScriptsProvider
 
   private nodes: ScriptNode[] = [];
   private scriptsFilePath: string | null = null;
+  private statusMessage: string = "";
 
   private readonly pubspecWatcher: FileSystemWatcher;
   private externalFileWatcher: FileSystemWatcher | null = null;
@@ -61,9 +66,11 @@ export class MerryScriptsProvider
     if (!result) {
       this.nodes = [];
       this.scriptsFilePath = null;
+      this.statusMessage = this.buildEmptyMessage();
     } else {
       this.nodes = result.nodes;
       this.scriptsFilePath = result.scriptsFilePath;
+      this.statusMessage = "";
 
       if (result.scriptsFilePath !== pubspecPath) {
         const dir = path.dirname(result.scriptsFilePath);
@@ -93,6 +100,24 @@ export class MerryScriptsProvider
     this._onDidChangeTreeData.fire();
   }
 
+  /**
+   * Build a contextual empty-state message.
+   * If a merry.yaml / derry.yaml exists in the workspace but pubspec.yaml
+   * has no `scripts:` reference, suggest the exact fix to the user.
+   */
+  private buildEmptyMessage(): string {
+    for (const candidate of SCRIPT_FILE_CANDIDATES) {
+      const filePath = path.join(this.workspaceRoot, candidate);
+      if (fs.existsSync(filePath)) {
+        return (
+          `Found '${candidate}' but pubspec.yaml has no \`scripts:\` field. ` +
+          `Add \`scripts: ${candidate}\` to pubspec.yaml to load scripts.`
+        );
+      }
+    }
+    return "No merry scripts found. Add a `scripts:` field to pubspec.yaml.";
+  }
+
   getTreeItem(element: ScriptItem): TreeItem {
     return element;
   }
@@ -113,6 +138,10 @@ export class MerryScriptsProvider
 
   getNodes(): ScriptNode[] {
     return this.nodes;
+  }
+
+  getStatusMessage(): string {
+    return this.statusMessage;
   }
 
   dispose(): void {
