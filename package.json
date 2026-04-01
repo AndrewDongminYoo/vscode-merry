@@ -55,6 +55,12 @@
         "title": "Open Script Source",
         "category": "Merry",
         "icon": "$(go-to-file)"
+      },
+      {
+        "command": "vscode-merry.installCli",
+        "title": "Install merry CLI",
+        "category": "Merry",
+        "icon": "$(cloud-download)"
       }
     ],
     "views": {
@@ -62,7 +68,7 @@
         {
           "id": "merryScripts",
           "name": "Merry Scripts",
-          "when": "workspaceContains:pubspec.yaml || workspaceContains:merry.yaml || workspaceContains:derry.yaml",
+          "when": "workspaceContains:pubspec.yaml",
           "icon": "$(run-all)"
         }
       ]
