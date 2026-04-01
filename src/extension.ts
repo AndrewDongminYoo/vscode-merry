@@ -1,3 +1,4 @@
+import * as path from "path";
 import {
   commands,
   env,
@@ -54,13 +55,38 @@ export async function activate(context: ExtensionContext) {
   updateTreeMessage();
   provider.onDidChangeTreeData(updateTreeMessage);
 
+  // Show a notification (once per unlinked filename) when a script file exists
+  // but pubspec.yaml has no `scripts:` reference to it.
+  let lastNotifiedUnlinked: string | null = null;
+  const checkUnlinkedScriptFile = () => {
+    const unlinked = provider.getUnlinkedScriptFile();
+    if (unlinked && unlinked !== lastNotifiedUnlinked) {
+      lastNotifiedUnlinked = unlinked;
+      window
+        .showInformationMessage(
+          `Merry Scripts: found '${unlinked}' but pubspec.yaml has no \`scripts:\` field. Add \`scripts: ${unlinked}\` to load scripts.`,
+          "Open pubspec.yaml",
+        )
+        .then((choice) => {
+          if (choice === "Open pubspec.yaml") {
+            const pubspecPath = path.join(workspaceRoot, "pubspec.yaml");
+            window.showTextDocument(Uri.file(pubspecPath));
+          }
+        });
+    } else if (!unlinked) {
+      lastNotifiedUnlinked = null;
+    }
+  };
+  checkUnlinkedScriptFile();
+  provider.onDidChangeTreeData(checkUnlinkedScriptFile);
+
   // 3. Register CodeLens provider for script source files.
   const codeLensProvider = new MerryCodeLensProvider(provider);
   const docSelector = [
-    { language: "yaml", pattern: "**/pubspec.yaml" },
-    { language: "yaml", pattern: "**/merry.yaml" },
-    { language: "yaml", pattern: "**/derry.yaml" },
-    { language: "yaml", pattern: "**/*.yaml" },
+    { scheme: "file", language: "yaml", pattern: "**/pubspec.yaml" },
+    { scheme: "file", language: "yaml", pattern: "**/merry.yaml" },
+    { scheme: "file", language: "yaml", pattern: "**/derry.yaml" },
+    { scheme: "file", language: "yaml", pattern: "**/*.yaml" },
   ];
 
   context.subscriptions.push(
