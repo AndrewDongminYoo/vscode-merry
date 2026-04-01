@@ -48,7 +48,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
         with:
-          name: vscode-merry-vsix
+          name: vscode-merry-scripts-vsix
           path: "*.vsix"
 
       - name: Publish to VS Marketplace

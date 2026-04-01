@@ -12,7 +12,7 @@
 - Classes, interfaces, and types use PascalCase.
 - Functions, locals, and module state use camelCase.
 - Tests live in `src/test/` by design; do not assume a root `test/` directory.
-- VS Code command ids use the `vscode-merry.*` namespace.
+- VS Code command ids use the `merry.*` namespace.
 
 ## Architectural conventions
 

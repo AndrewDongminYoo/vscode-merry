@@ -1,5 +1,5 @@
 {
-  "name": "vscode-merry",
+  "name": "vscode-merry-scripts",
   "displayName": "Merry Scripts",
   "description": "Discover and run merry/derry scripts directly from the VS Code Explorer.",
   "version": "0.1.0",
@@ -23,7 +23,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/AndrewDongminYoo/vscode-merry.git"
+    "url": "https://github.com/AndrewDongminYoo/merry.git"
   },
   "bugs": {
     "email": "ydm2790@gmail.com",
@@ -39,25 +39,25 @@
   "contributes": {
     "commands": [
       {
-        "command": "vscode-merry.runScript",
+        "command": "merry.runScript",
         "title": "Run Script",
         "category": "Merry",
         "icon": "$(play)"
       },
       {
-        "command": "vscode-merry.refresh",
+        "command": "merry.refresh",
         "title": "Refresh Scripts",
         "category": "Merry",
         "icon": "$(refresh)"
       },
       {
-        "command": "vscode-merry.openScriptSource",
+        "command": "merry.openScriptSource",
         "title": "Open Script Source",
         "category": "Merry",
         "icon": "$(go-to-file)"
       },
       {
-        "command": "vscode-merry.installCli",
+        "command": "merry.installCli",
         "title": "Install merry CLI",
         "category": "Merry",
         "icon": "$(cloud-download)"
@@ -75,24 +75,24 @@
     "menus": {
       "view/title": [
         {
-          "command": "vscode-merry.refresh",
+          "command": "merry.refresh",
           "when": "view == merryScripts",
           "group": "navigation"
         },
         {
-          "command": "vscode-merry.openScriptSource",
+          "command": "merry.openScriptSource",
           "when": "view == merryScripts",
           "group": "navigation"
         }
       ],
       "view/item/context": [
         {
-          "command": "vscode-merry.runScript",
+          "command": "merry.runScript",
           "when": "view == merryScripts && viewItem == script",
           "group": "inline"
         },
         {
-          "command": "vscode-merry.runScript",
+          "command": "merry.runScript",
           "when": "view == merryScripts && viewItem == script",
           "group": "merry@1"
         }
@@ -102,12 +102,12 @@
       "type": "object",
       "title": "Merry Scripts",
       "properties": {
-        "vscode-merry.enable": {
+        "merry.enable": {
           "type": "boolean",
           "default": true,
           "description": "Enable the Merry Scripts extension."
         },
-        "vscode-merry.reuseTerminal": {
+        "merry.reuseTerminal": {
           "type": "string",
           "enum": [
             "never",

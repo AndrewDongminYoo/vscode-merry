@@ -45,19 +45,19 @@ async function makeProvider(): Promise<MerryScriptsProvider> {
 suite("Integration: Merry Scripts View", () => {
   suiteSetup(async () => {
     // Ensure the extension has finished activating before any test runs.
-    // The extension registers vscode-merry.runScript during activate().
-    await waitForCommand("vscode-merry.runScript");
+    // The extension registers merry.runScript during activate().
+    await waitForCommand("merry.runScript");
   });
 
   // ── Extension activation ───────────────────────────────────────────────
 
   test("extension registers all expected commands", async () => {
     const cmds = await vscode.commands.getCommands(false);
-    assert.ok(cmds.includes("vscode-merry.runScript"), "runScript command");
-    assert.ok(cmds.includes("vscode-merry.refresh"), "refresh command");
-    assert.ok(cmds.includes("vscode-merry.installCli"), "installCli command");
+    assert.ok(cmds.includes("merry.runScript"), "runScript command");
+    assert.ok(cmds.includes("merry.refresh"), "refresh command");
+    assert.ok(cmds.includes("merry.installCli"), "installCli command");
     assert.ok(
-      cmds.includes("vscode-merry.openScriptSource"),
+      cmds.includes("merry.openScriptSource"),
       "openScriptSource command",
     );
   });
@@ -242,16 +242,14 @@ suite("Integration: Merry Scripts View", () => {
     // is always valid — regardless of whether the CLI is installed.
     const cmds = await vscode.commands.getCommands(false);
     assert.ok(
-      cmds.includes("vscode-merry.installCli"),
+      cmds.includes("merry.installCli"),
       "installCli command should be registered",
     );
 
     // Calling it should not throw (it may show an information message,
     // which we cannot easily assert, but it must not reject).
     await assert.doesNotReject(
-      Promise.resolve(
-        vscode.commands.executeCommand("vscode-merry.installCli"),
-      ),
+      Promise.resolve(vscode.commands.executeCommand("merry.installCli")),
     );
   });
 

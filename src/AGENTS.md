@@ -34,4 +34,4 @@
 - Do not hardcode `derry` when the code already abstracts over `merry | derry`.
 - Do not move parser semantics into UI classes.
 - Do not bypass provider refresh/reload flow with one-off tree mutations.
-- Do not change public command ids (`vscode-merry.*`) casually; they are manifest-facing API.
+- Do not change public command ids (`merry.*`) casually; they are manifest-facing API.

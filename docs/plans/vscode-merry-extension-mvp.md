@@ -1,4 +1,4 @@
-# Plan: `vscode-merry` Extension - Phase 1 MVP
+# Plan: `vscode-merry-scripts` Extension - Phase 1 MVP
 
 ## Context
 
@@ -92,7 +92,7 @@ class ScriptItem extends vscode.TreeItem {
   // description: commands[0] or node.description (undefined for groups)
   // tooltip: all commands joined with line breaks
   // iconPath: ThemeIcon('run') or ThemeIcon('folder') for groups
-  // command: vscode-merry.runScript (leaf nodes only)
+  // command: merry.runScript (leaf nodes only)
   // contextValue: 'script' or 'scriptGroup'
 }
 ```
@@ -141,8 +141,8 @@ class MerryScriptsProvider implements vscode.TreeDataProvider<ScriptItem> {
 
 **contributes.commands:**
 
-- `vscode-merry.runScript` - "Run Script" (TreeItem inline button `$(play)`)
-- `vscode-merry.refresh` - "Refresh" (view title button `$(refresh)`)
+- `merry.runScript` - "Run Script" (TreeItem inline button `$(play)`)
+- `merry.refresh` - "Refresh" (view title button `$(refresh)`)
 
 **contributes.menus:**
 
@@ -151,8 +151,8 @@ class MerryScriptsProvider implements vscode.TreeDataProvider<ScriptItem> {
 
 **contributes.configuration:**
 
-- `vscode-merry.reuseTerminal`: boolean, default `false`
-- `vscode-merry.enable`: boolean, default `true`
+- `merry.reuseTerminal`: boolean, default `false`
+- `merry.enable`: boolean, default `true`
 
 ### `src/extension.ts` Changes
 
@@ -162,12 +162,12 @@ export function activate(context: ExtensionContext) {
 
   context.subscriptions.push(
     window.registerTreeDataProvider("merryScripts", provider),
-    commands.registerCommand("vscode-merry.runScript", (item: ScriptItem) => {
+    commands.registerCommand("merry.runScript", (item: ScriptItem) => {
       // merry run <fullPath>  (space-delimited nested path)
       // Reuse an existing terminal or create a new one,
       // depending on the merry.reuseTerminal setting
     }),
-    commands.registerCommand("vscode-merry.refresh", () => provider.refresh()),
+    commands.registerCommand("merry.refresh", () => provider.refresh()),
   );
 }
 ```

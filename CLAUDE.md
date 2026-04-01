@@ -81,7 +81,7 @@ pubspec.yaml  ──parseMerryScripts()──▶  ScriptNode[]   (merry-parser.t
                                               │
                                          VS Code sidebar
                                               │
-                               vscode-merry.runScript command
+                               merry.runScript command
                                               │
                                <cli> run <fullPath>  ← integrated terminal
 ```

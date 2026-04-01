@@ -72,7 +72,7 @@ export class MerryCodeLensProvider implements CodeLensProvider {
       lenses.push(
         new CodeLens(range, {
           title: `${icon} Run: ${node.fullPath}${suffix}`,
-          command: "vscode-merry.runScript",
+          command: "merry.runScript",
           arguments: [{ node }],
         }),
       );

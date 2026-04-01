@@ -1,3 +1,4 @@
 {
-  "vscode-merry.reuseTerminal": "ask"
+  "merry.reuseTerminal": "ask",
+  "merry.enable": true
 }

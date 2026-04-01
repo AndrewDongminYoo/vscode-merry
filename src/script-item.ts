@@ -43,7 +43,7 @@ export class ScriptItem extends TreeItem {
 
       this.command = {
         title: "Run Script",
-        command: "vscode-merry.runScript",
+        command: "merry.runScript",
         arguments: [this],
       };
     }

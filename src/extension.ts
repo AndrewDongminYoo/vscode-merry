@@ -29,7 +29,7 @@ let statusBar: StatusBarItem | null = null;
 let extensionContext: ExtensionContext | null = null;
 
 export async function activate(context: ExtensionContext) {
-  console.log('Your extension "vscode-merry" is now active!');
+  console.log('Your extension "vscode-merry-scripts" is now active!');
   extensionContext = context;
 
   const workspaceFolders = workspace.workspaceFolders;
@@ -132,11 +132,11 @@ export async function activate(context: ExtensionContext) {
 
   // 5. Register commands.
   context.subscriptions.push(
-    commands.registerCommand("vscode-merry.installCli", () => {
+    commands.registerCommand("merry.installCli", () => {
       showInstallPrompt();
     }),
 
-    commands.registerCommand("vscode-merry.runScript", (item: ScriptItem) => {
+    commands.registerCommand("merry.runScript", (item: ScriptItem) => {
       if (!item || item.node.isGroup) return;
       if (!activeCli) {
         showInstallPrompt();
@@ -145,11 +145,11 @@ export async function activate(context: ExtensionContext) {
       void runInTerminal(item.node.fullPath, activeCli);
     }),
 
-    commands.registerCommand("vscode-merry.refresh", () => {
+    commands.registerCommand("merry.refresh", () => {
       provider.refresh();
     }),
 
-    commands.registerCommand("vscode-merry.openScriptSource", () => {
+    commands.registerCommand("merry.openScriptSource", () => {
       const filePath = provider.getScriptsFilePath();
       if (filePath) {
         window.showTextDocument(Uri.file(filePath));
@@ -167,13 +167,13 @@ function showCliMissingStatusBar(): void {
   statusBar = window.createStatusBarItem(StatusBarAlignment.Left, 100);
   statusBar.text = "$(warning) Merry: CLI not found";
   statusBar.tooltip = "merry (or derry) is not installed. Click to install.";
-  statusBar.command = "vscode-merry.installCli";
+  statusBar.command = "merry.installCli";
   statusBar.show();
   extensionContext?.subscriptions.push(statusBar);
 }
 
 async function runInTerminal(scriptPath: string, cli: MerryCli): Promise<void> {
-  const config = workspace.getConfiguration("vscode-merry");
+  const config = workspace.getConfiguration("merry");
   const reuse = config.get<string>("reuseTerminal", "never");
 
   // Shell integration lets us reliably detect busy state.

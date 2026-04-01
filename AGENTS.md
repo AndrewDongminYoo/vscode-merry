@@ -2,7 +2,7 @@
 
 ## Overview
 
-- `vscode-merry` is a VS Code extension for Dart/Flutter workspaces.
+- `vscode-merry-scripts` is a VS Code extension for Dart/Flutter workspaces.
 - It discovers merry/derry scripts from `pubspec.yaml` and optional external YAML, renders them in the Explorer, and runs them via the detected CLI.
 - Use this file for repo navigation. Use `CLAUDE.md` for the longer architecture narrative and constraints.
 

@@ -97,7 +97,7 @@ Add a new file that implements `vscode.CodeLensProvider`.
 - `provideCodeLenses(document)`:
   - If the open file is `pubspec.yaml`, compare it with `provider.getScriptsFilePath()` to determine whether it is the active script source file.
   - If the file is the script source file, iterate over the provider's node list and create a CodeLens for each YAML key position.
-  - Each CodeLens uses the title `Run: <scriptName>` and the command `vscode-merry.runScript`.
+  - Each CodeLens uses the title `Run: <scriptName>` and the command `merry.runScript`.
 
 ```typescript
 export class MerryCodeLensProvider implements CodeLensProvider {
@@ -127,7 +127,7 @@ Line lookup strategy:
 
 ### 4. `package.json` - Add the missing declarations
 
-- Add `vscode-merry.installCli` to `contributes.commands`.
+- Add `merry.installCli` to `contributes.commands`.
 - Simplify the view `when` clause. `workspaceContains:pubspec.yaml` is sufficient and matches the activation condition.
 - Add an `installCli` menu contribution for the Command Palette or another appropriate entry point.
 
