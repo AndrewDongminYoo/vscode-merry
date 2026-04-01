@@ -68,7 +68,6 @@
         {
           "id": "merryScripts",
           "name": "Merry Scripts",
-          "when": "workspaceContains:pubspec.yaml",
           "icon": "$(run-all)"
         }
       ]
