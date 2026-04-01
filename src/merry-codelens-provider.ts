@@ -7,6 +7,7 @@ import {
   type TextDocument,
 } from "vscode";
 
+import { Commands } from "./commands";
 import type { ScriptNode } from "./merry-parser";
 import type { MerryScriptsProvider } from "./merry-scripts-provider";
 
@@ -14,8 +15,14 @@ export class MerryCodeLensProvider implements CodeLensProvider {
   private readonly _onDidChangeCodeLenses = new EventEmitter<void>();
   readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
 
+  /** Cached per-label RegExp, invalidated when tree nodes change. */
+  private readonly regExpCache = new Map<string, RegExp>();
+
   constructor(private readonly provider: MerryScriptsProvider) {
-    provider.onDidChangeTreeData(() => this._onDidChangeCodeLenses.fire());
+    provider.onDidChangeTreeData(() => {
+      this.regExpCache.clear();
+      this._onDidChangeCodeLenses.fire();
+    });
   }
 
   provideCodeLenses(document: TextDocument): CodeLens[] {
@@ -29,16 +36,7 @@ export class MerryCodeLensProvider implements CodeLensProvider {
       return [];
     }
 
-    const text = document.getText();
-    const lines = text.split("\n");
-    return this.buildLenses(document, nodes, lines);
-  }
-
-  private buildLenses(
-    document: TextDocument,
-    nodes: ScriptNode[],
-    lines: string[],
-  ): CodeLens[] {
+    const lines = document.getText().split("\n");
     const lenses: CodeLens[] = [];
     this.collectLenses(nodes, lines, document, lenses);
     return lenses;
@@ -52,7 +50,6 @@ export class MerryCodeLensProvider implements CodeLensProvider {
   ): void {
     for (const node of nodes) {
       if (node.isGroup) {
-        // Groups are not directly runnable — recurse into children only
         this.collectLenses(node.children, lines, document, lenses);
         continue;
       }
@@ -72,21 +69,20 @@ export class MerryCodeLensProvider implements CodeLensProvider {
       lenses.push(
         new CodeLens(range, {
           title: `${icon} Run: ${node.fullPath}${suffix}`,
-          command: "merry.runScript",
+          command: Commands.runScript,
           arguments: [{ node }],
         }),
       );
     }
   }
 
-  /**
-   * Find the first line index where the given YAML key appears at the start
-   * of a line (after optional leading whitespace), followed by a colon.
-   */
   private findKeyLine(key: string, lines: string[]): number {
-    // Escape special regex chars in key
-    const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const pattern = new RegExp(`^\\s*${escaped}\\s*:`);
+    let pattern = this.regExpCache.get(key);
+    if (!pattern) {
+      const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      pattern = new RegExp(`^\\s*${escaped}\\s*:`);
+      this.regExpCache.set(key, pattern);
+    }
     return lines.findIndex((line) => pattern.test(line));
   }
 }

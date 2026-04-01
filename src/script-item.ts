@@ -5,6 +5,7 @@ import {
   TreeItemCollapsibleState,
 } from "vscode";
 
+import { Commands } from "./commands";
 import type { ScriptNode } from "./merry-parser";
 
 export class ScriptItem extends TreeItem {
@@ -43,7 +44,7 @@ export class ScriptItem extends TreeItem {
 
       this.command = {
         title: "Run Script",
-        command: "merry.runScript",
+        command: Commands.runScript,
         arguments: [this],
       };
     }

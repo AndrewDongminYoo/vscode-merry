@@ -33,6 +33,8 @@ export class MerryScriptsProvider
 
   private readonly pubspecWatcher: FileSystemWatcher;
   private externalFileWatcher: FileSystemWatcher | null = null;
+  /** Listeners attached to externalFileWatcher — drained on each reload. */
+  private externalListenerDisposables: Disposable[] = [];
 
   private readonly disposables: Disposable[] = [];
 
@@ -62,6 +64,10 @@ export class MerryScriptsProvider
       this.externalFileWatcher.dispose();
       this.externalFileWatcher = null;
     }
+    for (const d of this.externalListenerDisposables) {
+      d.dispose();
+    }
+    this.externalListenerDisposables = [];
 
     const pubspecPath = path.join(this.workspaceRoot, "pubspec.yaml");
     const result = await parseMerryScripts(pubspecPath);
@@ -89,17 +95,17 @@ export class MerryScriptsProvider
         this.externalFileWatcher.onDidChange(
           onExternalChange,
           this,
-          this.disposables,
+          this.externalListenerDisposables,
         );
         this.externalFileWatcher.onDidCreate(
           onExternalChange,
           this,
-          this.disposables,
+          this.externalListenerDisposables,
         );
         this.externalFileWatcher.onDidDelete(
           onExternalChange,
           this,
-          this.disposables,
+          this.externalListenerDisposables,
         );
       }
     }

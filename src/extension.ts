@@ -13,6 +13,7 @@ import {
 } from "vscode";
 
 import { type CliInfo, detectMerryCli, type MerryCli } from "./cli-detector";
+import { Commands } from "./commands";
 import { MerryCodeLensProvider } from "./merry-codelens-provider";
 import { MerryScriptsProvider } from "./merry-scripts-provider";
 import type { ScriptItem } from "./script-item";
@@ -56,10 +57,7 @@ export async function activate(context: ExtensionContext) {
     treeView.message = msg.length > 0 ? msg : undefined;
   };
   updateTreeMessage();
-  provider.onDidChangeTreeData(updateTreeMessage);
 
-  // Show a notification (once per unlinked filename) when a script file exists
-  // but pubspec.yaml has no `scripts:` reference to it.
   let lastNotifiedUnlinked: string | null = null;
   const checkUnlinkedScriptFile = () => {
     const unlinked = provider.getUnlinkedScriptFile();
@@ -81,7 +79,6 @@ export async function activate(context: ExtensionContext) {
     }
   };
   checkUnlinkedScriptFile();
-  provider.onDidChangeTreeData(checkUnlinkedScriptFile);
 
   // 3. Register CodeLens provider for script source files.
   const codeLensProvider = new MerryCodeLensProvider(provider);
@@ -95,6 +92,8 @@ export async function activate(context: ExtensionContext) {
   context.subscriptions.push(
     treeView,
     provider,
+    provider.onDidChangeTreeData(updateTreeMessage),
+    provider.onDidChangeTreeData(checkUnlinkedScriptFile),
     languages.registerCodeLensProvider(docSelector, codeLensProvider),
 
     window.onDidCloseTerminal((closed) => {
@@ -132,11 +131,11 @@ export async function activate(context: ExtensionContext) {
 
   // 5. Register commands.
   context.subscriptions.push(
-    commands.registerCommand("merry.installCli", () => {
+    commands.registerCommand(Commands.installCli, () => {
       showInstallPrompt();
     }),
 
-    commands.registerCommand("merry.runScript", (item: ScriptItem) => {
+    commands.registerCommand(Commands.runScript, (item: ScriptItem) => {
       if (!item || item.node.isGroup) return;
       if (!activeCli) {
         showInstallPrompt();
@@ -145,11 +144,11 @@ export async function activate(context: ExtensionContext) {
       void runInTerminal(item.node.fullPath, activeCli);
     }),
 
-    commands.registerCommand("merry.refresh", () => {
+    commands.registerCommand(Commands.refresh, () => {
       provider.refresh();
     }),
 
-    commands.registerCommand("merry.openScriptSource", () => {
+    commands.registerCommand(Commands.openScriptSource, () => {
       const filePath = provider.getScriptsFilePath();
       if (filePath) {
         window.showTextDocument(Uri.file(filePath));
@@ -167,7 +166,7 @@ function showCliMissingStatusBar(): void {
   statusBar = window.createStatusBarItem(StatusBarAlignment.Left, 100);
   statusBar.text = "$(warning) Merry: CLI not found";
   statusBar.tooltip = "merry (or derry) is not installed. Click to install.";
-  statusBar.command = "merry.installCli";
+  statusBar.command = Commands.installCli;
   statusBar.show();
   extensionContext?.subscriptions.push(statusBar);
 }
