@@ -17,6 +17,11 @@ import { MerryScriptsProvider } from "./merry-scripts-provider";
 import type { ScriptItem } from "./script-item";
 
 let terminal: Terminal | null = null;
+/**
+ * Tracks whether the tracked terminal is actively running a command.
+ * Only reliable when shell integration is active; otherwise stays false.
+ */
+let terminalBusy = false;
 let activeCli: MerryCli | null = null;
 let statusBar: StatusBarItem | null = null;
 
@@ -64,8 +69,27 @@ export async function activate(context: ExtensionContext) {
     treeView,
     provider,
     languages.registerCodeLensProvider(docSelector, codeLensProvider),
+
     window.onDidCloseTerminal((closed) => {
-      if (terminal === closed) terminal = null;
+      if (terminal === closed) {
+        terminal = null;
+        terminalBusy = false;
+      }
+    }),
+
+    // Shell integration events: track whether our terminal is executing a command.
+    // These only fire when VS Code shell integration is active in the terminal;
+    // if shell integration is unavailable the busy flag stays false and reuse
+    // falls back to the user's setting without busy-check enforcement.
+    window.onDidStartTerminalShellExecution((e) => {
+      if (e.terminal === terminal) {
+        terminalBusy = true;
+      }
+    }),
+    window.onDidEndTerminalShellExecution((e) => {
+      if (e.terminal === terminal) {
+        terminalBusy = false;
+      }
     }),
   );
 
@@ -126,16 +150,26 @@ async function runInTerminal(scriptPath: string, cli: MerryCli): Promise<void> {
   const config = workspace.getConfiguration("vscode-merry");
   const reuse = config.get<string>("reuseTerminal", "never");
 
+  // Shell integration lets us reliably detect busy state.
+  // If it is not active, assume not-busy so the user's reuse preference is respected.
+  const shellIntegrationActive = terminal?.shellIntegration !== undefined;
+  const isBusy = shellIntegrationActive && terminalBusy;
+
+  // A busy terminal must never be reused — always open a fresh one.
+  const candidateAvailable = terminal !== null && !isBusy;
+
   let shouldReuse = false;
 
-  if (reuse === "always" && terminal) {
-    shouldReuse = true;
-  } else if (reuse === "ask" && terminal) {
-    const choice = await window.showQuickPick(
-      ["Reuse existing terminal", "Create new terminal"],
-      { placeHolder: "How would you like to run this script?" },
-    );
-    shouldReuse = choice === "Reuse existing terminal";
+  if (candidateAvailable) {
+    if (reuse === "always") {
+      shouldReuse = true;
+    } else if (reuse === "ask") {
+      const choice = await window.showQuickPick(
+        ["Reuse existing terminal", "Create new terminal"],
+        { placeHolder: "How would you like to run this script?" },
+      );
+      shouldReuse = choice === "Reuse existing terminal";
+    }
   }
 
   if (shouldReuse && terminal) {
