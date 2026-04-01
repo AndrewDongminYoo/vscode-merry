@@ -1,14 +1,24 @@
 # Custom Dictionary Words
 amodio
 codesign
+dartdoc
 dbaeumer
+dblite
 derry
+dotenv
 esbuild
 fvm
 gitmoji
+gradlew
 merry
 nfvm
+pbxuser
+perspectivev
+podspec
 posttest
 pubspec
+sconsign
 vscodeignore
+xcconfig
+xcuserdata
 yarnrc
