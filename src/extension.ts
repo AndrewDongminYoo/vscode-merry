@@ -2,6 +2,7 @@ import {
   commands,
   env,
   type ExtensionContext,
+  languages,
   StatusBarAlignment,
   type StatusBarItem,
   type Terminal,
@@ -11,6 +12,7 @@ import {
 } from "vscode";
 
 import { type CliInfo, detectMerryCli, type MerryCli } from "./cli-detector";
+import { MerryCodeLensProvider } from "./merry-codelens-provider";
 import { MerryScriptsProvider } from "./merry-scripts-provider";
 import type { ScriptItem } from "./script-item";
 
@@ -19,8 +21,6 @@ let activeCli: MerryCli | null = null;
 let statusBar: StatusBarItem | null = null;
 
 export async function activate(context: ExtensionContext) {
-  // Use the console to output diagnostic information (console.log) and errors (console.error)
-  // This line of code will only be executed once when your extension is activated
   console.log('Your extension "vscode-merry" is now active!');
 
   const workspaceFolders = workspace.workspaceFolders;
@@ -29,43 +29,56 @@ export async function activate(context: ExtensionContext) {
     return;
   }
 
+  const workspaceRoot = workspaceFolders[0].uri.fsPath;
+
+  // 1. Create provider and await initial load so nodes are ready before
+  //    registering the tree view (avoids the empty-tree race condition).
+  const provider = new MerryScriptsProvider(workspaceRoot);
+  await provider.load();
+
+  // 2. Register tree view — data is already populated.
+  const treeView = window.createTreeView("merryScripts", {
+    treeDataProvider: provider,
+    showCollapseAll: true,
+  });
+
+  // 3. Register CodeLens provider for script source files.
+  const codeLensProvider = new MerryCodeLensProvider(provider);
+  const docSelector = [
+    { language: "yaml", pattern: "**/pubspec.yaml" },
+    { language: "yaml", pattern: "**/merry.yaml" },
+    { language: "yaml", pattern: "**/derry.yaml" },
+    { language: "yaml", pattern: "**/*.yaml" },
+  ];
+
+  context.subscriptions.push(
+    treeView,
+    provider,
+    languages.registerCodeLensProvider(docSelector, codeLensProvider),
+    window.onDidCloseTerminal((closed) => {
+      if (terminal === closed) terminal = null;
+    }),
+  );
+
+  // 4. Detect CLI in background — does not block tree view display.
+  detectMerryCli().then((cliInfo) => {
+    if (!cliInfo) {
+      showCliMissingStatusBar(context);
+      showInstallPrompt();
+    } else {
+      activeCli = cliInfo.cli;
+      showCliDetectedMessage(cliInfo);
+    }
+  });
+
+  // 5. Register commands.
   context.subscriptions.push(
     commands.registerCommand("vscode-merry.installCli", () => {
       showInstallPrompt();
     }),
-  );
-
-  const cliInfo = await detectMerryCli();
-
-  if (!cliInfo) {
-    showCliMissingStatusBar(context);
-    showInstallPrompt();
-  } else {
-    activeCli = cliInfo.cli;
-    showCliDetectedMessage(cliInfo);
-  }
-
-  const workspaceRoot = workspaceFolders[0].uri.fsPath;
-  const provider = new MerryScriptsProvider(workspaceRoot);
-
-  window.onDidCloseTerminal(
-    (closed) => {
-      if (terminal === closed) {
-        terminal = null;
-      }
-    },
-    null,
-    context.subscriptions,
-  );
-
-  context.subscriptions.push(
-    provider,
-    window.registerTreeDataProvider("merryScripts", provider),
 
     commands.registerCommand("vscode-merry.runScript", (item: ScriptItem) => {
-      if (!item || item.node.isGroup) {
-        return;
-      }
+      if (!item || item.node.isGroup) return;
       if (!activeCli) {
         showInstallPrompt();
         return;
@@ -137,7 +150,6 @@ function showInstallPrompt(): void {
         const t = window.createTerminal("Merry Install");
         t.show();
         t.sendText("dart pub global activate merry");
-        // Re-detect after install completes
         setTimeout(async () => {
           const info = await detectMerryCli();
           if (info) {

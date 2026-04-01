@@ -37,16 +37,19 @@ export class MerryScriptsProvider
     this.pubspecWatcher.onDidCreate(onPubspecChange, this, this.disposables);
     this.pubspecWatcher.onDidDelete(onPubspecChange, this, this.disposables);
     this.disposables.push(this.pubspecWatcher);
+    // Note: reload() is NOT called here — call load() from activate()
+  }
 
-    this.reload();
+  /** Initial load entry point. Called once from activate() and awaited. */
+  async load(): Promise<void> {
+    await this.reload();
   }
 
   refresh(): void {
     this.reload();
   }
 
-  private async reload(): Promise<void> {
-    // Dispose previous external file watcher
+  async reload(): Promise<void> {
     if (this.externalFileWatcher) {
       this.externalFileWatcher.dispose();
       this.externalFileWatcher = null;
@@ -62,16 +65,28 @@ export class MerryScriptsProvider
       this.nodes = result.nodes;
       this.scriptsFilePath = result.scriptsFilePath;
 
-      // If scripts are in an external file, watch it too
       if (result.scriptsFilePath !== pubspecPath) {
+        const dir = path.dirname(result.scriptsFilePath);
+        const base = path.basename(result.scriptsFilePath);
         this.externalFileWatcher = workspace.createFileSystemWatcher(
-          result.scriptsFilePath,
+          new RelativePattern(dir, base),
         );
         const onExternalChange = () => this.reload();
-        this.externalFileWatcher.onDidChange(onExternalChange);
-        this.externalFileWatcher.onDidCreate(onExternalChange);
-        this.externalFileWatcher.onDidDelete(onExternalChange);
-        this.disposables.push(this.externalFileWatcher);
+        this.externalFileWatcher.onDidChange(
+          onExternalChange,
+          this,
+          this.disposables,
+        );
+        this.externalFileWatcher.onDidCreate(
+          onExternalChange,
+          this,
+          this.disposables,
+        );
+        this.externalFileWatcher.onDidDelete(
+          onExternalChange,
+          this,
+          this.disposables,
+        );
       }
     }
 
@@ -94,6 +109,10 @@ export class MerryScriptsProvider
 
   getScriptsFilePath(): string | null {
     return this.scriptsFilePath;
+  }
+
+  getNodes(): ScriptNode[] {
+    return this.nodes;
   }
 
   dispose(): void {
