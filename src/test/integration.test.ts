@@ -72,15 +72,15 @@ suite("Integration: Merry Scripts View", () => {
 
       // Scripts declared in test-workspace/merry.yaml
       for (const expected of [
+        "development",
         "test",
-        "analyze",
+        "reinstall",
+        "bootstrap",
+        "generate",
         "format",
-        "clean",
-        "gen",
-        "publish",
+        "hard",
         "build",
-        "run",
-        "upgrade",
+        "generate-l10n",
       ]) {
         assert.ok(
           labels.includes(expected),
@@ -114,7 +114,9 @@ suite("Integration: Merry Scripts View", () => {
       const items = provider.getChildren();
       const testItem = items.find((i: ScriptItem) => i.node.label === "test");
       assert.ok(testItem, "Expected 'test' node");
-      assert.deepStrictEqual(testItem.node.commands, ["flutter test"]);
+      assert.deepStrictEqual(testItem.node.commands, [
+        'flutter test --coverage --concurrency=4 --test-randomize-ordering-seed=random --dart-define="FLUTTER_TEST=true"',
+      ]);
       assert.strictEqual(testItem.node.isGroup, false);
       assert.strictEqual(testItem.node.isHook, false);
     } finally {
@@ -122,46 +124,22 @@ suite("Integration: Merry Scripts View", () => {
     }
   });
 
-  test("'gen' has description and single command", async () => {
+  test("'generate' has description and single command", async () => {
     const provider = await makeProvider();
     try {
       const items = provider.getChildren();
-      const genItem = items.find((i: ScriptItem) => i.node.label === "gen");
-      assert.ok(genItem, "Expected 'gen' node");
+      const genItem = items.find(
+        (i: ScriptItem) => i.node.label === "generate",
+      );
+      assert.ok(genItem, "Expected 'generate' node");
       assert.strictEqual(
         genItem.node.description,
-        "Run build_runner code generation",
+        "Runs code generation builders and sorts imports to set up project files.",
       );
       assert.deepStrictEqual(genItem.node.commands, [
         "dart run build_runner build --delete-conflicting-outputs",
+        "$generate-l10n",
       ]);
-    } finally {
-      provider.dispose();
-    }
-  });
-
-  // ── Tree data: platform-dispatch ──────────────────────────────────────
-
-  test("'run' is a platform-dispatch leaf, not a group", async () => {
-    const provider = await makeProvider();
-    try {
-      const items = provider.getChildren();
-      const runItem = items.find((i: ScriptItem) => i.node.label === "run");
-      assert.ok(runItem, "Expected 'run' node");
-      assert.strictEqual(
-        runItem.node.isGroup,
-        false,
-        "'run' should be a leaf, not a group",
-      );
-      assert.strictEqual(
-        runItem.node.isPlatformDispatch,
-        true,
-        "'run' should be flagged as platform-dispatch",
-      );
-      assert.ok(
-        runItem.node.commands.length > 0,
-        "Platform-dispatch node should have at least one command",
-      );
     } finally {
       provider.dispose();
     }
@@ -218,7 +196,7 @@ suite("Integration: Merry Scripts View", () => {
     }
   });
 
-  test("'build' group contains android, ios, web children", async () => {
+  test("'build' group contains aab, ipa, apk children", async () => {
     const provider = await makeProvider();
     try {
       const items = provider.getChildren();
@@ -228,11 +206,11 @@ suite("Integration: Merry Scripts View", () => {
       const children = provider.getChildren(buildItem);
       const childLabels = children.map((c: ScriptItem) => c.node.label);
       assert.ok(
-        childLabels.includes("android"),
-        `Expected 'android', got: [${childLabels.join(", ")}]`,
+        childLabels.includes("aab"),
+        `Expected 'aab', got: [${childLabels.join(", ")}]`,
       );
-      assert.ok(childLabels.includes("ios"));
-      assert.ok(childLabels.includes("web"));
+      assert.ok(childLabels.includes("ipa"));
+      assert.ok(childLabels.includes("apk"));
     } finally {
       provider.dispose();
     }
@@ -255,6 +233,26 @@ suite("Integration: Merry Scripts View", () => {
     } finally {
       provider.dispose();
     }
+  });
+
+  // ── CLI missing: status bar ────────────────────────────────────────────
+
+  test("installCli command is registered and callable without throwing", async () => {
+    // The installCli command must exist so the status bar item's click target
+    // is always valid — regardless of whether the CLI is installed.
+    const cmds = await vscode.commands.getCommands(false);
+    assert.ok(
+      cmds.includes("vscode-merry.installCli"),
+      "installCli command should be registered",
+    );
+
+    // Calling it should not throw (it may show an information message,
+    // which we cannot easily assert, but it must not reject).
+    await assert.doesNotReject(
+      Promise.resolve(
+        vscode.commands.executeCommand("vscode-merry.installCli"),
+      ),
+    );
   });
 
   // ── getNodes() ─────────────────────────────────────────────────────────
