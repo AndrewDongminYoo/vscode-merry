@@ -19,7 +19,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -38,8 +38,11 @@ jobs:
       - name: Compile
         run: pnpm run compile
 
+      - name: Install Xvfb
+        run: sudo apt-get install -y xvfb
+
       - name: Tests
-        run: pnpm run test
+        run: xvfb-run -a pnpm run test
 
       - name: Build VSIX
         run: pnpm dlx @vscode/vsce package --no-dependencies
