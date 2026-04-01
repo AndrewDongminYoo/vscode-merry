@@ -51,6 +51,12 @@ export class MerryCodeLensProvider implements CodeLensProvider {
     lenses: CodeLens[],
   ): void {
     for (const node of nodes) {
+      if (node.isGroup) {
+        // Groups are not directly runnable — recurse into children only
+        this.collectLenses(node.children, lines, document, lenses);
+        continue;
+      }
+
       const lineIndex = this.findKeyLine(node.label, lines);
       if (lineIndex === -1) {
         continue;
@@ -61,25 +67,15 @@ export class MerryCodeLensProvider implements CodeLensProvider {
         new Position(lineIndex, lines[lineIndex].length),
       );
 
-      if (node.isGroup) {
-        // Groups get a label but no run command
-        lenses.push(
-          new CodeLens(range, {
-            title: `$(folder) ${node.label}`,
-            command: "",
-          }),
-        );
-        this.collectLenses(node.children, lines, document, lenses);
-      } else {
-        const icon = node.isHook ? "$(arrow-right)" : "$(play)";
-        lenses.push(
-          new CodeLens(range, {
-            title: `${icon} Run: ${node.fullPath}`,
-            command: "vscode-merry.runScript",
-            arguments: [{ node }],
-          }),
-        );
-      }
+      const icon = node.isHook ? "$(arrow-right)" : "$(play)";
+      const suffix = node.isPlatformDispatch ? " (platform)" : "";
+      lenses.push(
+        new CodeLens(range, {
+          title: `${icon} Run: ${node.fullPath}${suffix}`,
+          command: "vscode-merry.runScript",
+          arguments: [{ node }],
+        }),
+      );
     }
   }
 

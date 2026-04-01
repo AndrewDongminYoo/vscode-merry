@@ -9,6 +9,20 @@ const KEY_SCRIPTS = "(scripts)";
 const KEY_DESCRIPTION = "(description)";
 const KEY_WORKDIR = "(workdir)";
 
+/**
+ * Platform-dispatch meta-keys: when a map has ONLY these (plus other meta-keys)
+ * and no `(scripts)` key, it is a platform-dispatch leaf — not a group.
+ * Running `merry run <name>` will pick the host platform automatically.
+ */
+const PLATFORM_META_KEYS = new Set([
+  "(linux)",
+  "(macos)",
+  "(windows)",
+  "(ios)",
+  "(android)",
+  "(web)",
+]);
+
 export interface ScriptNode {
   /** Display label — the last path segment (e.g. "linux-x64"). */
   label: string;
@@ -23,6 +37,8 @@ export interface ScriptNode {
   children: ScriptNode[];
   /** True when the label starts with "pre" or "post" followed by another script name. */
   isHook: boolean;
+  /** True when commands are platform-dispatch variants (linux/macos/windows/…). */
+  isPlatformDispatch?: boolean;
 }
 
 type YamlMap = Record<string, unknown>;
@@ -36,6 +52,20 @@ function toStringList(value: unknown): string[] {
 
 function isMetaKey(key: string): boolean {
   return META_KEY_RE.test(key);
+}
+
+/**
+ * Collect platform-dispatch commands from a map whose keys are all meta-keys.
+ * Returns the values of any platform meta-keys present, or [] if none found.
+ */
+function collectPlatformCommands(map: YamlMap): string[] {
+  const cmds: string[] = [];
+  for (const [key, value] of Object.entries(map)) {
+    if (PLATFORM_META_KEYS.has(key) && value !== null && value !== undefined) {
+      cmds.push(String(value));
+    }
+  }
+  return cmds;
 }
 
 /**
@@ -89,16 +119,39 @@ function parseMap(
           isHook: isHookKey(key, allTopLevelKeys),
         };
       } else {
-        // No (scripts) key → nested group
-        const children = parseMap(valueMap, fullPath, allTopLevelKeys);
-        node = {
-          label: key,
-          fullPath,
-          commands: [],
-          isGroup: true,
-          children,
-          isHook: false,
-        };
+        const nonMetaKeys = Object.keys(valueMap).filter((k) => !isMetaKey(k));
+
+        if (nonMetaKeys.length > 0) {
+          // Has regular (non-parenthesized) child keys → collapsible group
+          const children = parseMap(valueMap, fullPath, allTopLevelKeys);
+          node = {
+            label: key,
+            fullPath,
+            commands: [],
+            isGroup: true,
+            children,
+            isHook: false,
+          };
+        } else {
+          // All keys are meta-keys and there is no (scripts) key.
+          // Check for platform-dispatch keys like (linux), (macos), (windows).
+          const platformCmds = collectPlatformCommands(valueMap);
+          if (platformCmds.length > 0) {
+            node = {
+              label: key,
+              fullPath,
+              commands: platformCmds,
+              description: valueMap[KEY_DESCRIPTION] as string | undefined,
+              isGroup: false,
+              children: [],
+              isHook: isHookKey(key, allTopLevelKeys),
+              isPlatformDispatch: true,
+            };
+          } else {
+            // Pure meta-only map with no executable content — skip
+            continue;
+          }
+        }
       }
     } else {
       continue;

@@ -42,6 +42,15 @@ export async function activate(context: ExtensionContext) {
     showCollapseAll: true,
   });
 
+  const updateTreeMessage = () => {
+    treeView.message =
+      provider.getNodes().length === 0
+        ? "No merry scripts found. Add a `scripts:` field to pubspec.yaml."
+        : undefined;
+  };
+  updateTreeMessage();
+  provider.onDidChangeTreeData(updateTreeMessage);
+
   // 3. Register CodeLens provider for script source files.
   const codeLensProvider = new MerryCodeLensProvider(provider);
   const docSelector = [
@@ -83,7 +92,7 @@ export async function activate(context: ExtensionContext) {
         showInstallPrompt();
         return;
       }
-      runInTerminal(item.node.fullPath, activeCli);
+      void runInTerminal(item.node.fullPath, activeCli);
     }),
 
     commands.registerCommand("vscode-merry.refresh", () => {
@@ -113,11 +122,23 @@ function showCliMissingStatusBar(context: ExtensionContext): void {
   context.subscriptions.push(statusBar);
 }
 
-function runInTerminal(scriptPath: string, cli: MerryCli): void {
+async function runInTerminal(scriptPath: string, cli: MerryCli): Promise<void> {
   const config = workspace.getConfiguration("vscode-merry");
-  const reuse = config.get<boolean>("reuseTerminal", false);
+  const reuse = config.get<string>("reuseTerminal", "never");
 
-  if (reuse && terminal) {
+  let shouldReuse = false;
+
+  if (reuse === "always" && terminal) {
+    shouldReuse = true;
+  } else if (reuse === "ask" && terminal) {
+    const choice = await window.showQuickPick(
+      ["Reuse existing terminal", "Create new terminal"],
+      { placeHolder: "How would you like to run this script?" },
+    );
+    shouldReuse = choice === "Reuse existing terminal";
+  }
+
+  if (shouldReuse && terminal) {
     terminal.show();
   } else {
     terminal = window.createTerminal("Merry Scripts");
