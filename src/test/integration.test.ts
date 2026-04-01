@@ -29,28 +29,14 @@ async function waitForCommand(
 }
 
 /**
- * Wait for the provider to emit its first `onDidChangeTreeData` event,
- * which fires after the initial async `reload()` finishes.
+ * Create a provider pointing at the currently open workspace.
+ * Uses provider.load() (the new explicit entry point) so the tree is
+ * populated synchronously before any assertion runs.
  */
-function waitForLoad(provider: MerryScriptsProvider): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(
-      () => reject(new Error("Timeout: tree data did not load within 3 s")),
-      3000,
-    );
-    const sub = provider.onDidChangeTreeData!(() => {
-      clearTimeout(timer);
-      sub.dispose();
-      resolve();
-    });
-  });
-}
-
-/** Create a provider pointing at the currently open workspace and wait for load. */
 async function makeProvider(): Promise<MerryScriptsProvider> {
   const root = vscode.workspace.workspaceFolders![0].uri.fsPath;
   const provider = new MerryScriptsProvider(root);
-  await waitForLoad(provider);
+  await provider.load();
   return provider;
 }
 
@@ -154,6 +140,33 @@ suite("Integration: Merry Scripts View", () => {
     }
   });
 
+  // ── Tree data: platform-dispatch ──────────────────────────────────────
+
+  test("'run' is a platform-dispatch leaf, not a group", async () => {
+    const provider = await makeProvider();
+    try {
+      const items = provider.getChildren();
+      const runItem = items.find((i: ScriptItem) => i.node.label === "run");
+      assert.ok(runItem, "Expected 'run' node");
+      assert.strictEqual(
+        runItem.node.isGroup,
+        false,
+        "'run' should be a leaf, not a group",
+      );
+      assert.strictEqual(
+        runItem.node.isPlatformDispatch,
+        true,
+        "'run' should be flagged as platform-dispatch",
+      );
+      assert.ok(
+        runItem.node.commands.length > 0,
+        "Platform-dispatch node should have at least one command",
+      );
+    } finally {
+      provider.dispose();
+    }
+  });
+
   // ── Tree data: hooks ───────────────────────────────────────────────────
 
   test("pretest is marked as a hook with arrow-right icon", async () => {
@@ -244,13 +257,24 @@ suite("Integration: Merry Scripts View", () => {
     }
   });
 
+  // ── getNodes() ─────────────────────────────────────────────────────────
+
+  test("getNodes() returns the same top-level nodes as getChildren()", async () => {
+    const provider = await makeProvider();
+    try {
+      const fromChildren = provider.getChildren().map((i) => i.node.label);
+      const fromNodes = provider.getNodes().map((n) => n.label);
+      assert.deepStrictEqual(fromChildren, fromNodes);
+    } finally {
+      provider.dispose();
+    }
+  });
+
   // ── Refresh ────────────────────────────────────────────────────────────
 
   test("refresh triggers onDidChangeTreeData", async () => {
     const provider = await makeProvider();
     try {
-      // Call provider.refresh() directly — the vscode-merry.refresh command
-      // targets the extension's own registered provider (a different instance).
       const fired = await new Promise<boolean>((resolve) => {
         const timer = setTimeout(() => resolve(false), 2000);
         const sub = provider.onDidChangeTreeData!(() => {

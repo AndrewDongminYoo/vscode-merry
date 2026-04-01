@@ -186,6 +186,80 @@ scripts:
     assert.strictEqual(group.children[0].label, "android");
   });
 
+  // ── Platform-dispatch nodes ────────────────────────────────────
+
+  test("parses platform-dispatch node as leaf with isPlatformDispatch=true", async () => {
+    const p = writePubspec(`
+name: example
+scripts:
+  run:
+    (linux): flutter run -d linux
+    (macos): flutter run -d macos
+    (windows): flutter run -d windows
+`);
+    const result = await parseMerryScripts(p);
+    assert.ok(result);
+    const node = result.nodes.find((n) => n.label === "run");
+    assert.ok(node, "Expected 'run' node");
+    assert.strictEqual(node.isGroup, false, "Platform-dispatch should be leaf");
+    assert.strictEqual(node.isPlatformDispatch, true);
+    assert.strictEqual(node.commands.length, 3);
+    assert.ok(node.commands.includes("flutter run -d linux"));
+    assert.ok(node.commands.includes("flutter run -d macos"));
+    assert.ok(node.commands.includes("flutter run -d windows"));
+  });
+
+  test("platform-dispatch node preserves (description)", async () => {
+    const p = writePubspec(`
+name: example
+scripts:
+  run:
+    (description): Run the app on the current platform
+    (linux): flutter run -d linux
+    (macos): flutter run -d macos
+`);
+    const result = await parseMerryScripts(p);
+    assert.ok(result);
+    const node = result.nodes.find((n) => n.label === "run");
+    assert.ok(node);
+    assert.strictEqual(node.description, "Run the app on the current platform");
+    assert.strictEqual(node.isPlatformDispatch, true);
+  });
+
+  test("map with only non-platform meta-keys is skipped", async () => {
+    const p = writePubspec(`
+name: example
+scripts:
+  (variables):
+    APP_NAME: my_app
+  test: flutter test
+`);
+    const result = await parseMerryScripts(p);
+    assert.ok(result);
+    // (variables) is a meta-key at top level — skipped entirely
+    assert.strictEqual(result.nodes.length, 1);
+    assert.strictEqual(result.nodes[0].label, "test");
+  });
+
+  test("(aliases) only map inside group is skipped", async () => {
+    const p = writePubspec(`
+name: example
+scripts:
+  upgrade:
+    (description): Upgrade deps
+    (scripts): flutter pub upgrade
+    (aliases):
+      - up
+`);
+    const result = await parseMerryScripts(p);
+    assert.ok(result);
+    // upgrade has (scripts) → leaf, (aliases) is skipped
+    const node = result.nodes.find((n) => n.label === "upgrade");
+    assert.ok(node);
+    assert.strictEqual(node.isGroup, false);
+    assert.deepStrictEqual(node.commands, ["flutter pub upgrade"]);
+  });
+
   // ── Pre/post hook detection ────────────────────────────────────
 
   test("marks preX as hook when X exists", async () => {
