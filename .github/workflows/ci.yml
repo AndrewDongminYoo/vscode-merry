@@ -1,8 +1,13 @@
 name: CI
 
 on:
+  workflow_dispatch: # yamllint disable-line rule:empty-values
   pull_request: { branches: [main] }
   push: { tags: [v*] }
+
+permissions:
+  checks: write
+  contents: write
 
 jobs:
   validate:
