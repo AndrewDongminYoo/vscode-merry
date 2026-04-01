@@ -1,50 +1,99 @@
-# merry.yaml — comprehensive example covering all merry script features.
-# This file is referenced from pubspec.yaml via: scripts: merry.yaml
+# --- Development workflow ---------------------------------------------------
+development:
+  (aliases): dev
+  (description): Runs the Flutter application with hot reload enabled, ignoring deprecation warnings.
+  (scripts): flutter run --debug --hot --ignore-deprecation
 
-# ── Simple string commands ─────────────────────────────────────
-test: flutter test
-analyze: flutter analyze
-format: dart format .
+# --- Quality gates ----------------------------------------------------------
+pretest:
+  (description): Clean Existing Coverage reports
+  (scripts): rm -rf coverage
 
-# ── List of commands ──────────────────────────────────────────
-clean:
-  - flutter clean
-  - flutter pub get
-
-# ── Pre/post hooks (run automatically with `merry run test`) ──
-pretest: flutter clean
-posttest: echo "✓ Test run complete"
-
-# ── Definition with description and workdir ───────────────────
-gen:
-  (description): Run build_runner code generation
-  (scripts): dart run build_runner build --delete-conflicting-outputs
-
-# ── Definition with list scripts ──────────────────────────────
-publish:
-  (description): Dry-run publish check
+test:
+  (description): Runs all tests in the Flutter project with coverage enabled.
   (scripts):
-    - $gen
-    - $test
-    - dart pub publish --dry-run
+    - flutter test --coverage --concurrency=4 --test-randomize-ordering-seed=random --dart-define="FLUTTER_TEST=true"
 
-# ── Nested group (build platform targets) ─────────────────────
+posttest:
+  (description): Generates a coverage report from the test coverage data.
+  (scripts):
+    - |
+      # Generate Directory Hierarchy HTML
+      genhtml coverage/lcov.info -o coverage/html --quiet --simplified-colors --show-zero-columns
+
+# --- Maintenance scripts ----------------------------------------------------
+reinstall:
+  (description): Cleans and reinstalls the Flutter project by removing old builds, regenerate boiler-plate codes
+  (scripts):
+    - flutter clean
+    - flutter packages get
+    - (cd ios && pod install)
+    - (cd macos && pod install)
+
+bootstrap:
+  (description): Initializes the project by generating necessary code, sorting imports, applying fixes, and formatting.
+  (scripts):
+    - flutter pub get
+    - $generate
+    - $format
+
+generate:
+  (description): Runs code generation builders and sorts imports to set up project files.
+  (scripts):
+    - dart run build_runner build --delete-conflicting-outputs
+    - $generate-l10n
+
+format:
+  (description): Applies automated fixes, sorts imports, and formats the codebase to ensure consistent code quality.
+  (scripts):
+    - dart fix --apply
+    - dart format --line-length 120 .
+
+hard:
+  (description): Forces an upgrade of Flutter and its packages to their latest versions and updates CocoaPods
+  (scripts):
+    - flutter upgrade --force
+    - flutter packages upgrade --major-versions --tighten
+    - (cd ios && pod update)
+    - (cd macos && pod update)
+
+# --- Build artifacts --------------------------------------------------------
 build:
-  android:
-    - flutter build apk --release
-    - echo "APK saved to build/app/outputs/apk/release/"
-  ios: flutter build ios --release --no-codesign
-  web: flutter build web --release
+  aab:
+    (description): 🚨 Builds a Android App Bundle
+    (scripts):
+      - >
+        flutter build appbundle --release
+        --tree-shake-icons
+        --build-number $(TZ='Asia/Seoul' date +'%y%m%d%H')
 
-# ── Platform-specific scripts ─────────────────────────────────
-run:
-  (linux): flutter run -d linux
-  (macos): flutter run -d macos
-  (windows): flutter run -d windows
+  ipa:
+    (description): 🚨 Builds an iOS archive bundle Release mode
+    (scripts):
+      - >
+        flutter build ipa --release
+        --tree-shake-icons
+        --build-number $(TZ='Asia/Seoul' date +'%y%m%d%H')
 
-# ── Aliases ───────────────────────────────────────────────────
-upgrade:
-  (description): Upgrade all pub dependencies
-  (scripts): flutter pub upgrade --major-versions
-  (aliases):
-    - up
+  apk:
+    (description): ⚠️ Builds a Android APK
+    (scripts):
+      - >
+        flutter build apk --release
+        --tree-shake-icons
+        --build-number $(TZ='Asia/Seoul' date +'%y%m%d%H')
+
+# --- Localization scripts ----------------------------------------------------
+generate-l10n:
+  (description): Generate Localization Files with `flutter_localizations`
+  (aliases): gen-l10n
+  (scripts): |
+    flutter gen-l10n \
+      --format \
+      --arb-dir=lib/l10n/arb \
+      --template-arb-file=app_ko.arb \
+      --output-localization-file=app_localizations.dart \
+      --output-dir=lib/l10n/gen \
+      --required-resource-attributes \
+      --no-nullable-getter \
+      --preferred-supported-locales=ko,en
