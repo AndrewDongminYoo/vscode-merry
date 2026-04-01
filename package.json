@@ -2,10 +2,11 @@
   "name": "vscode-merry-scripts",
   "displayName": "Merry/Derry Scripts",
   "description": "Discover and run merry/derry scripts directly from the VS Code Explorer.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "dongminyu",
   "author": "Dongmin Yu <ydm2790@gmail.com> (https://github.com/AndrewDongminYoo)",
   "license": "MIT",
+  "icon": "assets/icons/dart-scripts.png",
   "engines": {
     "vscode": "^1.110.0"
   },
