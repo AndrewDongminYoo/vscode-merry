@@ -1,5 +1,6 @@
 # Custom Dictionary Words
 amodio
+appbundle
 codesign
 dartdoc
 dbaeumer
@@ -8,6 +9,7 @@ derry
 dotenv
 esbuild
 fvm
+genhtml
 gitmoji
 gradlew
 merry

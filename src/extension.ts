@@ -25,9 +25,12 @@ let terminal: Terminal | null = null;
 let terminalBusy = false;
 let activeCli: MerryCli | null = null;
 let statusBar: StatusBarItem | null = null;
+/** Stored during activate() so helper functions can push disposables. */
+let extensionContext: ExtensionContext | null = null;
 
 export async function activate(context: ExtensionContext) {
   console.log('Your extension "vscode-merry" is now active!');
+  extensionContext = context;
 
   const workspaceFolders = workspace.workspaceFolders;
   if (!workspaceFolders || workspaceFolders.length === 0) {
@@ -120,8 +123,7 @@ export async function activate(context: ExtensionContext) {
   // 4. Detect CLI in background — does not block tree view display.
   detectMerryCli().then((cliInfo) => {
     if (!cliInfo) {
-      showCliMissingStatusBar(context);
-      showInstallPrompt();
+      showInstallPrompt(); // also calls showCliMissingStatusBar() internally
     } else {
       activeCli = cliInfo.cli;
       showCliDetectedMessage(cliInfo);
@@ -156,7 +158,7 @@ export async function activate(context: ExtensionContext) {
   );
 }
 
-function showCliMissingStatusBar(context: ExtensionContext): void {
+function showCliMissingStatusBar(): void {
   if (statusBar) {
     statusBar.show();
     return;
@@ -167,7 +169,7 @@ function showCliMissingStatusBar(context: ExtensionContext): void {
   statusBar.tooltip = "merry (or derry) is not installed. Click to install.";
   statusBar.command = "vscode-merry.installCli";
   statusBar.show();
-  context.subscriptions.push(statusBar);
+  extensionContext?.subscriptions.push(statusBar);
 }
 
 async function runInTerminal(scriptPath: string, cli: MerryCli): Promise<void> {
@@ -215,6 +217,10 @@ function showCliDetectedMessage(info: CliInfo): void {
 }
 
 function showInstallPrompt(): void {
+  // Always ensure the status bar warning is visible regardless of which code
+  // path triggered this prompt (initial activation, runScript, installCli).
+  showCliMissingStatusBar();
+
   const installAction = "Install merry";
   const docsAction = "Open pub.dev";
 
