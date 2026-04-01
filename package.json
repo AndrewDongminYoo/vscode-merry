@@ -108,9 +108,19 @@
           "description": "Enable the Merry Scripts extension."
         },
         "vscode-merry.reuseTerminal": {
-          "type": "boolean",
-          "default": false,
-          "description": "Reuse an existing Merry terminal instead of creating a new one each time."
+          "type": "string",
+          "enum": [
+            "never",
+            "always",
+            "ask"
+          ],
+          "enumDescriptions": [
+            "Always create a new terminal for each script run.",
+            "Reuse the existing Merry terminal if it is open.",
+            "Ask each time whether to reuse or create a new terminal."
+          ],
+          "default": "never",
+          "description": "Terminal reuse behavior when running merry scripts."
         }
       }
     }
