@@ -27,6 +27,9 @@ export class MerryScriptsProvider
   private nodes: ScriptNode[] = [];
   private scriptsFilePath: string | null = null;
   private statusMessage: string = "";
+  /** Non-null when a script file (merry.yaml/derry.yaml) exists but is not
+   *  referenced from pubspec.yaml. Stores the detected filename. */
+  private unlinkedScriptFile: string | null = null;
 
   private readonly pubspecWatcher: FileSystemWatcher;
   private externalFileWatcher: FileSystemWatcher | null = null;
@@ -66,10 +69,14 @@ export class MerryScriptsProvider
     if (!result) {
       this.nodes = [];
       this.scriptsFilePath = null;
-      this.statusMessage = this.buildEmptyMessage();
+      this.unlinkedScriptFile = this.detectUnlinkedScriptFile();
+      this.statusMessage = this.unlinkedScriptFile
+        ? ""
+        : "No merry scripts found. Add a `scripts:` field to pubspec.yaml.";
     } else {
       this.nodes = result.nodes;
       this.scriptsFilePath = result.scriptsFilePath;
+      this.unlinkedScriptFile = null;
       this.statusMessage = "";
 
       if (result.scriptsFilePath !== pubspecPath) {
@@ -101,21 +108,17 @@ export class MerryScriptsProvider
   }
 
   /**
-   * Build a contextual empty-state message.
-   * If a merry.yaml / derry.yaml exists in the workspace but pubspec.yaml
-   * has no `scripts:` reference, suggest the exact fix to the user.
+   * Returns the filename of a script file found in the workspace root that is
+   * not yet referenced from pubspec.yaml, or null if none found.
    */
-  private buildEmptyMessage(): string {
+  private detectUnlinkedScriptFile(): string | null {
     for (const candidate of SCRIPT_FILE_CANDIDATES) {
       const filePath = path.join(this.workspaceRoot, candidate);
       if (fs.existsSync(filePath)) {
-        return (
-          `Found '${candidate}' but pubspec.yaml has no \`scripts:\` field. ` +
-          `Add \`scripts: ${candidate}\` to pubspec.yaml to load scripts.`
-        );
+        return candidate;
       }
     }
-    return "No merry scripts found. Add a `scripts:` field to pubspec.yaml.";
+    return null;
   }
 
   getTreeItem(element: ScriptItem): TreeItem {
@@ -142,6 +145,11 @@ export class MerryScriptsProvider
 
   getStatusMessage(): string {
     return this.statusMessage;
+  }
+
+  /** Returns the script filename that is unlinked from pubspec.yaml, or null. */
+  getUnlinkedScriptFile(): string | null {
+    return this.unlinkedScriptFile;
   }
 
   dispose(): void {
