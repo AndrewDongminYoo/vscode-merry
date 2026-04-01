@@ -1,36 +1,39 @@
-# Plan: Extension Full Restructuring — TreeView Fix + CodeLens
+# Plan: Fix the VS Code Merry Extension UI - TreeView + CodeLens
 
 ## Context
 
-현재 extension이 `pubspec.yaml`과 외부 스크립트 파일(`merry.yaml` 등)을 정상적으로 파싱하지만 사이드바 TreeView에 아무것도 표시되지 않는다. 원인은 크게 두 가지다:
+The extension currently parses `pubspec.yaml` and external script files such as `merry.yaml` correctly, but nothing appears in the sidebar TreeView. There are two main causes:
 
-1. **Async 초기화 경쟁 조건**: `MerryScriptsProvider` 생성자 안에서 `this.reload()`를 호출하지만 await하지 않아, `registerTreeDataProvider` 호출 시점에 `nodes`가 비어있다. VS Code가 `getChildren()`을 최초 호출할 때 빈 배열을 받고, 이후 `onDidChangeTreeData` 이벤트가 발화되어야만 업데이트되는데 이 UX가 깨져 있다.
+1. **Async initialization race condition**: `MerryScriptsProvider` calls `this.reload()` inside its constructor without awaiting it, so `nodes` is still empty when `registerTreeDataProvider` runs. When VS Code calls `getChildren()` for the first time, it receives an empty array. The view only updates later if `onDidChangeTreeData` fires, which leads to a broken initial UX.
 
-2. **미구현 기능**: 스크립트 파일을 에디터에서 열었을 때 각 명령어 위에 녹색 실행 버튼(CodeLens)을 표시하는 기능이 없다.
+2. **Missing feature**: there is no CodeLens support to show an inline run button above each script command when a script file is open in the editor.
 
-추가로 `package.json`에 `installCli` 커맨드 선언이 누락되어 있고, 외부 파일 watcher가 절대경로 문자열을 glob 패턴으로 잘못 사용하고 있다.
+There are also two smaller issues:
+
+- `package.json` does not declare the `installCli` command.
+- The external file watcher uses an absolute path string as though it were a glob pattern.
 
 ---
 
 ## What Will Change
 
-### 1. `extension.ts` — 활성화 흐름 재설계
+### 1. `extension.ts` - Redesign the activation flow
 
-**현재 문제:**
+**Current problem:**
 
 ```typescript
-const provider = new MerryScriptsProvider(workspaceRoot); // constructor 안에서 비동기 reload()
-window.registerTreeDataProvider("merryScripts", provider); // 이 시점에 nodes = []
-provider.refresh(); // 또 reload() 호출
+const provider = new MerryScriptsProvider(workspaceRoot); // async reload() starts inside the constructor
+window.registerTreeDataProvider("merryScripts", provider); // nodes is still []
+provider.refresh(); // triggers reload() again
 ```
 
-**수정 방향:**
+**Planned change:**
 
-- `MerryScriptsProvider` 생성자에서 `reload()` 제거
-- `activate()`에서 `await provider.load()` 호출 후 provider 등록
-- CLI 감지(`detectMerryCli`)를 비동기로 분리해 TreeView 표시를 블로킹하지 않음
-- `window.registerTreeDataProvider` → `window.createTreeView`로 전환 (view 가시성 제어 가능)
-- CodeLens Provider 등록 추가
+- Remove `reload()` from the `MerryScriptsProvider` constructor.
+- Add `await provider.load()` in `activate()` before registering the provider.
+- Run CLI detection (`detectMerryCli`) asynchronously so TreeView rendering is not blocked.
+- Switch from `window.registerTreeDataProvider` to `window.createTreeView` so the view can be controlled more explicitly.
+- Register a CodeLens provider.
 
 ```typescript
 export async function activate(context: ExtensionContext) {
@@ -39,17 +42,17 @@ export async function activate(context: ExtensionContext) {
 
   const workspaceRoot = workspaceFolders[0].uri.fsPath;
 
-  // 1. Provider 생성 후 초기 로딩 완료 대기
+  // 1. Create the provider and wait for the initial load to finish.
   const provider = new MerryScriptsProvider(workspaceRoot);
-  await provider.load(); // nodes 채워짐
+  await provider.load();
 
-  // 2. TreeView 등록 (이미 데이터가 있음)
+  // 2. Register the TreeView after data is available.
   const treeView = window.createTreeView("merryScripts", {
     treeDataProvider: provider,
     showCollapseAll: true,
   });
 
-  // 3. CodeLens Provider 등록
+  // 3. Register the CodeLens provider.
   const codeLensProvider = new MerryCodeLensProvider(provider);
   const docSelector = [
     { language: "yaml", pattern: "**/pubspec.yaml" },
@@ -62,39 +65,39 @@ export async function activate(context: ExtensionContext) {
     languages.registerCodeLensProvider(docSelector, codeLensProvider),
   );
 
-  // 4. CLI 감지는 백그라운드로 (TreeView를 블로킹하지 않음)
+  // 4. Detect the CLI in the background so TreeView rendering is not blocked.
   detectMerryCli().then((info) => { ... });
 
-  // 5. 커맨드 등록...
+  // 5. Register commands...
 }
 ```
 
-### 2. `merry-scripts-provider.ts` — 초기화 패턴 변경
+### 2. `merry-scripts-provider.ts` - Change the initialization pattern
 
-- 생성자: watcher만 설정, `reload()` 호출 안 함
-- `load(): Promise<void>` 메서드 추가 — `activate()`에서 await할 초기 로딩 진입점
-- 외부 파일 watcher: `createFileSystemWatcher(string)` → `createFileSystemWatcher(RelativePattern)` 변경
+- The constructor should only set up watchers and must not call `reload()`.
+- Add `load(): Promise<void>` as the initial loading entry point that `activate()` can await.
+- Replace the external file watcher from `createFileSystemWatcher(string)` to `createFileSystemWatcher(RelativePattern)`.
 
   ```typescript
-  // Before (잘못된 절대경로 string):
+  // Before: incorrect absolute-path string usage
   workspace.createFileSystemWatcher(result.scriptsFilePath);
 
-  // After (RelativePattern):
+  // After: RelativePattern
   const dir = path.dirname(result.scriptsFilePath);
   const base = path.basename(result.scriptsFilePath);
   workspace.createFileSystemWatcher(new RelativePattern(dir, base));
   ```
 
-- `reload()` 완료 시 CodeLens도 갱신하도록 이벤트 추가
+- When `reload()` finishes, also trigger a CodeLens refresh event.
 
-### 3. `src/merry-codelens-provider.ts` (신규)
+### 3. `src/merry-codelens-provider.ts` (new)
 
-`vscode.CodeLensProvider`를 구현하는 새 파일.
+Add a new file that implements `vscode.CodeLensProvider`.
 
 - `provideCodeLenses(document)`:
-  - 현재 열린 파일이 pubspec.yaml이면 → `provider.getScriptsFilePath()`와 비교해 스크립트 소스 파일인지 확인
-  - 스크립트 소스 파일이면 → `provider`의 노드 목록을 순회하며 YAML 내 각 키의 줄 번호를 찾아 CodeLens 생성
-  - 각 CodeLens: 제목 `▷ Run: <scriptName>`, 커맨드 `vscode-merry.runScript`
+  - If the open file is `pubspec.yaml`, compare it with `provider.getScriptsFilePath()` to determine whether it is the active script source file.
+  - If the file is the script source file, iterate over the provider's node list and create a CodeLens for each YAML key position.
+  - Each CodeLens uses the title `Run: <scriptName>` and the command `vscode-merry.runScript`.
 
 ```typescript
 export class MerryCodeLensProvider implements CodeLensProvider {
@@ -102,7 +105,7 @@ export class MerryCodeLensProvider implements CodeLensProvider {
   readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
 
   constructor(private readonly provider: MerryScriptsProvider) {
-    // provider의 onDidChangeTreeData 구독 → CodeLens도 갱신
+    // Refresh CodeLens whenever the tree data changes.
     provider.onDidChangeTreeData(() => this._onDidChangeCodeLenses.fire());
   }
 
@@ -110,42 +113,46 @@ export class MerryCodeLensProvider implements CodeLensProvider {
     const scriptsFilePath = this.provider.getScriptsFilePath();
     if (!scriptsFilePath || document.uri.fsPath !== scriptsFilePath) return [];
 
-    const nodes = this.provider.getNodes(); // 새로 노출할 메서드
+    const nodes = this.provider.getNodes();
     return this.buildLenses(document, nodes);
   }
 }
 ```
 
-줄 번호 탐색: `document.getText()` 줄별 순회 → `/^(\s*)(key):` 패턴으로 YAML 키 위치 매핑.
+Line lookup strategy:
 
-### 4. `package.json` — 누락된 선언 추가
+- Iterate through `document.getText()` line by line.
+- Match YAML keys with a pattern such as `/^(\\s*)(key):/`.
+- Map each script key to its line number and build the corresponding CodeLens.
 
-- `vscode-merry.installCli` 커맨드를 `contributes.commands`에 추가
-- 뷰 `when` 절 단순화: `workspaceContains:pubspec.yaml` 하나로 충분 (활성화 조건과 일치)
-- `contributes.menus`에 `installCli` 항목 추가 (status bar 클릭 또는 팔레트)
+### 4. `package.json` - Add the missing declarations
 
-### 5. `merry-scripts-provider.ts` — `getNodes()` 노출
+- Add `vscode-merry.installCli` to `contributes.commands`.
+- Simplify the view `when` clause. `workspaceContains:pubspec.yaml` is sufficient and matches the activation condition.
+- Add an `installCli` menu contribution for the Command Palette or another appropriate entry point.
 
-CodeLens Provider에서 현재 파싱된 노드를 읽을 수 있도록 `getNodes(): ScriptNode[]` 메서드 추가.
+### 5. `merry-scripts-provider.ts` - Expose `getNodes()`
+
+Add `getNodes(): ScriptNode[]` so the CodeLens provider can read the currently parsed node tree.
 
 ---
 
 ## Files to Modify
 
-| File                             | Action                                                |
-| -------------------------------- | ----------------------------------------------------- |
-| `src/extension.ts`               | 활성화 흐름 재설계, CodeLens 등록 추가                |
-| `src/merry-scripts-provider.ts`  | `load()` 메서드 추가, watcher 수정, `getNodes()` 노출 |
-| `src/merry-codelens-provider.ts` | **신규** — CodeLens 구현                              |
-| `package.json`                   | `installCli` 커맨드 선언, 뷰 when 절 단순화           |
+| File                             | Action                                                          |
+| -------------------------------- | --------------------------------------------------------------- |
+| `src/extension.ts`               | Redesign the activation flow and register the CodeLens provider |
+| `src/merry-scripts-provider.ts`  | Add `load()`, fix the watcher, and expose `getNodes()`          |
+| `src/merry-codelens-provider.ts` | New file for the CodeLens implementation                        |
+| `package.json`                   | Declare `installCli` and simplify the view `when` clause        |
 
 ---
 
 ## Verification
 
-1. `pnpm run compile` — 타입 에러 없이 빌드
-2. F5로 Extension Development Host 실행 (test-workspace 열림)
-3. 사이드바 Explorer 패널 → **Merry Scripts** 섹션에 스크립트 목록이 즉시 표시됨
-4. `test-workspace/merry.yaml` 열기 → 각 스크립트 키 위에 `▷ Run: <name>` CodeLens 버튼 표시됨
-5. CodeLens 클릭 → 터미널에서 `merry run <script>` 실행
-6. `pnpm run test` — 기존 테스트 통과 확인
+1. Run `pnpm run compile` and confirm the project builds without type errors.
+2. Launch the Extension Development Host with `F5` and open `test-workspace`.
+3. In the Explorer sidebar, confirm that the **Merry Scripts** section shows the script list immediately.
+4. Open `test-workspace/merry.yaml` and confirm that a `Run: <name>` CodeLens appears above each script key.
+5. Click a CodeLens and confirm that the terminal runs `merry run <script>`.
+6. Run `pnpm run test` and confirm that the existing test suite still passes.
