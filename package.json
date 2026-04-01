@@ -1,6 +1,6 @@
 {
   "name": "vscode-merry-scripts",
-  "displayName": "Merry Scripts",
+  "displayName": "Merry/Derry Scripts",
   "description": "Discover and run merry/derry scripts directly from the VS Code Explorer.",
   "version": "0.1.0",
   "publisher": "dongminyu",
