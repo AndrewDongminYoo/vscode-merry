@@ -157,7 +157,6 @@ function parseMap(
       continue;
     }
 
-    console.debug(`${key}`, node);
     nodes.push(node);
   }
 
@@ -181,7 +180,6 @@ function parseScriptsMap(scriptsMap: YamlMap): ScriptNode[] {
   const topLevelKeys = new Set(
     Object.keys(scriptsMap).filter((k) => !isMetaKey(k)),
   );
-  console.debug("topLevelKeys:", topLevelKeys);
   return parseMap(scriptsMap, "", topLevelKeys);
 }
 
@@ -195,10 +193,10 @@ function resolveScriptsSource(
 ): { scriptsFilePath: string; isExternal: boolean } | null {
   const scripts = doc["scripts"];
   if (scripts === undefined || scripts === null) {
-    console.debug("No `scripts` in pubspec.yaml!");
+    console.debug("No `scripts:` in pubspec.yaml!");
     return null;
   }
-  console.debug("`scripts` in pubspec.yaml!", scripts);
+  console.debug("`scripts:` in pubspec.yaml!", scripts);
   if (typeof scripts === "string") {
     const dir = path.dirname(pubspecPath);
     return { scriptsFilePath: path.join(dir, scripts), isExternal: true };
@@ -237,7 +235,6 @@ export async function parseMerryScripts(
     return null;
   }
   if (!doc || typeof doc !== "object") {
-    console.error(`${doc} "${typeof doc}"`);
     return null;
   }
 
@@ -252,18 +249,18 @@ export async function parseMerryScripts(
     let externalContent: string;
     try {
       externalContent = fs.readFileSync(source.scriptsFilePath, "utf8");
-    } catch {
+    } catch (error) {
+      console.error("Failed to read file content", error);
       return null;
     }
-    console.debug("externalContent:", externalContent);
     let externalDoc: YamlMap | null;
     try {
       externalDoc = yaml.load(externalContent) as YamlMap | null;
-    } catch {
+    } catch (error) {
+      console.error("Failed to load external yaml file", error);
       return null;
     }
     if (!externalDoc || typeof externalDoc !== "object") {
-      console.debug("externalDoc:", externalDoc);
       return null;
     }
     scriptsMap = externalDoc;
@@ -271,7 +268,7 @@ export async function parseMerryScripts(
     scriptsMap = doc["scripts"] as YamlMap;
   }
 
-  console.debug("scriptsMap:", scriptsMap);
+  console.debug("merry scripts:", scriptsMap);
   return {
     nodes: parseScriptsMap(scriptsMap),
     scriptsFilePath: source.scriptsFilePath,
