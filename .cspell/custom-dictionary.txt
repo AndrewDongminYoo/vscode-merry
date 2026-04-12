@@ -2,6 +2,7 @@
 agentic
 amodio
 appbundle
+browsable
 codesign
 dartdoc
 dbaeumer
@@ -21,6 +22,7 @@ perspectivev
 podspec
 posttest
 pubspec
+quickpick
 sconsign
 vscodeignore
 xcconfig

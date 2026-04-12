@@ -5,6 +5,23 @@ All notable changes to the **Merry Scripts** extension will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-04-12
+
+### Added
+
+- **VS Code Tasks integration** — all runnable merry scripts are now available in `Tasks: Run Task` under a **merry** section. Scripts are automatically kept in sync with `merry.yaml`; no manual `tasks.json` configuration required.
+- `build *` scripts appear in `Terminal › Run Build Task` (⇧⌘B / Ctrl+Shift+B).
+- `test`, `pretest`, and `posttest` scripts appear in `Terminal › Run Test Task` (⇧⌘T / Ctrl+Shift+T).
+- Each task shows its description (or command preview) as detail text in the picker.
+
+### Changed
+
+- Internal script state is now managed by a dedicated `MerryScriptService`, which both the sidebar tree view and the new task provider share. This eliminates duplicate parsing and ensures the two views are always in sync.
+
+### Fixed
+
+- Extension components are now disposed in the correct order on deactivation, preventing potential event-listener access after the underlying service has been torn down.
+
 ## [0.1.3] - 2026-04-12
 
 ### Added
@@ -55,6 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Provider constructor no longer calls `reload()` asynchronously; callers must call `await provider.load()` explicitly, eliminating the empty-tree race condition.
 - External `FileSystemWatcher` now uses `RelativePattern` instead of an absolute path string.
 
+[0.2.0]: https://github.com/AndrewDongminYoo/vscode-merry/releases/tag/v0.2.0
 [0.1.0]: https://github.com/AndrewDongminYoo/vscode-merry/releases/tag/v0.1.0
 [0.1.1]: https://github.com/AndrewDongminYoo/vscode-merry/releases/tag/v0.1.1
 [0.1.2]: https://github.com/AndrewDongminYoo/vscode-merry/releases/tag/v0.1.2
