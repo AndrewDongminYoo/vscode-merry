@@ -8,7 +8,7 @@
   "license": "MIT",
   "icon": "assets/icons/dart-scripts.png",
   "engines": {
-    "vscode": "^1.110.0"
+    "vscode": "^1.115.0"
   },
   "categories": [
     "Other",
