@@ -97,3 +97,34 @@ generate-l10n:
       --required-resource-attributes \
       --no-nullable-getter \
       --preferred-supported-locales=ko,en
+
+firebase:
+  bootstrap:
+    (scripts):
+      - $firebase:clean
+      - $firebase:config:dev
+      - $firebase:config:stg
+      - $firebase:config:prod
+
+  clean:
+    (description): ⚠️ Removes generated Firebase config files (google-services.json, GoogleService-Info.plist, firebase_options*.dart).
+    (scripts):
+      - rm -f lib/firebase_options.dart
+      - rm -f lib/firebase_options_dev.dart
+      - rm -f lib/firebase_options_stg.dart
+
+  config:
+    dev:
+      (description): ⚠️ Generates FlutterFire config for development flavor.
+      (scripts):
+        - flutterfire configure --project=development
+
+    stg:
+      (description): ⚠️ Generates FlutterFire config for staging flavor (Debug/Release).
+      (scripts):
+        - flutterfire configure --project=staging
+
+    prod:
+      (description): ⚠️ Generates FlutterFire config for production flavor.
+      (scripts):
+        - flutterfire configure --project=production

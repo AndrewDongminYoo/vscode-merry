@@ -8,6 +8,7 @@ dblite
 derry
 dotenv
 esbuild
+flutterfire
 fvm
 genhtml
 gitmoji
