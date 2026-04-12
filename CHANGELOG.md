@@ -5,6 +5,21 @@ All notable changes to the **Merry Scripts** extension will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-04-12
+
+### Added
+
+- **CodeLens tests** — comprehensive test suite for `MerryCodeLensProvider` covering leaf/group distinction, nested path line lookup, duplicate label disambiguation, platform-dispatch titles, and hook icon behavior.
+
+### Changed
+
+- CodeLens line lookup now resolves nested YAML keys by full path context, preventing incorrect line placement when sibling groups share the same leaf label.
+- TypeScript compiler configuration now explicitly declares `node`, `mocha`, and `vscode` in the `types` field, replacing implicit auto-discovery that broke under `module: Node16`.
+
+### Fixed
+
+- Duplicate CodeLens placement on nested script keys — each leaf is now matched to the correct line even when the same label appears under multiple parent groups.
+
 ## [0.1.2] - 2026-04-01
 
 ### Changed:
@@ -43,3 +58,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.1.0]: https://github.com/AndrewDongminYoo/vscode-merry/releases/tag/v0.1.0
 [0.1.1]: https://github.com/AndrewDongminYoo/vscode-merry/releases/tag/v0.1.1
 [0.1.2]: https://github.com/AndrewDongminYoo/vscode-merry/releases/tag/v0.1.2
+[0.1.3]: https://github.com/AndrewDongminYoo/vscode-merry/releases/tag/v0.1.3
