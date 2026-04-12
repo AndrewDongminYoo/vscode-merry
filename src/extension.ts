@@ -93,10 +93,10 @@ export async function activate(context: ExtensionContext) {
 
   context.subscriptions.push(
     treeView,
-    service,
     provider,
     provider.onDidChangeTreeData(updateTreeMessage),
     provider.onDidChangeTreeData(checkUnlinkedScriptFile),
+    service,
     languages.registerCodeLensProvider(docSelector, codeLensProvider),
 
     window.onDidCloseTerminal((closed) => {
