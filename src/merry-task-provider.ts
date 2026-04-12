@@ -3,6 +3,7 @@ import {
   ShellExecution,
   Task,
   TaskGroup,
+  type TaskProvider,
   TaskRevealKind,
   TaskScope,
 } from "vscode";
@@ -11,7 +12,7 @@ import type { MerryCli } from "./cli-detector";
 import type { ScriptNode } from "./merry-parser";
 import type { MerryScriptService } from "./merry-script-service";
 
-export class MerryTaskProvider implements Disposable {
+export class MerryTaskProvider implements TaskProvider<Task>, Disposable {
   static readonly taskType = "merry";
 
   private cachedTasks: Task[] | undefined;
@@ -53,7 +54,7 @@ export class MerryTaskProvider implements Disposable {
       { type: MerryTaskProvider.taskType, script: node.fullPath },
       TaskScope.Workspace,
       node.fullPath,
-      "merry",
+      MerryTaskProvider.taskType,
       new ShellExecution(`${cli} run ${node.fullPath}`),
     );
     task.detail = node.description ?? node.commands.join(" && ");
