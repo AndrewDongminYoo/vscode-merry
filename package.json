@@ -124,7 +124,19 @@
           "description": "Terminal reuse behavior when running merry scripts."
         }
       }
-    }
+    },
+    "taskDefinitions": [
+      {
+        "type": "merry",
+        "required": [],
+        "properties": {
+          "script": {
+            "type": "string",
+            "description": "The merry script path to run (e.g. 'build aab')"
+          }
+        }
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "pnpm run package",

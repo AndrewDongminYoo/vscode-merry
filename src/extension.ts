@@ -6,6 +6,7 @@ import {
   languages,
   StatusBarAlignment,
   type StatusBarItem,
+  tasks,
   type Terminal,
   Uri,
   window,
@@ -17,6 +18,7 @@ import { Commands } from "./commands";
 import { MerryCodeLensProvider } from "./merry-codelens-provider";
 import { MerryScriptService } from "./merry-script-service";
 import { MerryScriptsProvider } from "./merry-scripts-provider";
+import { MerryTaskProvider } from "./merry-task-provider";
 import type { ScriptItem } from "./script-item";
 
 let terminal: Terminal | null = null;
@@ -47,6 +49,10 @@ export async function activate(context: ExtensionContext) {
   const service = new MerryScriptService(workspaceRoot);
   await service.load();
   const provider = new MerryScriptsProvider(service);
+  const taskProvider = new MerryTaskProvider(
+    service,
+    () => activeCli ?? "merry",
+  );
 
   // 2. Register tree view — data is already populated.
   const treeView = window.createTreeView("merryScripts", {
@@ -93,6 +99,8 @@ export async function activate(context: ExtensionContext) {
 
   context.subscriptions.push(
     treeView,
+    taskProvider,
+    tasks.registerTaskProvider(MerryTaskProvider.taskType, taskProvider),
     provider,
     provider.onDidChangeTreeData(updateTreeMessage),
     provider.onDidChangeTreeData(checkUnlinkedScriptFile),
