@@ -35,7 +35,6 @@ export class MerryScriptService implements Disposable {
     this.pubspecWatcher.onDidChange(onPubspecChange, this, this.disposables);
     this.pubspecWatcher.onDidCreate(onPubspecChange, this, this.disposables);
     this.pubspecWatcher.onDidDelete(onPubspecChange, this, this.disposables);
-    this.disposables.push(this.pubspecWatcher);
   }
 
   async load(): Promise<void> {
@@ -125,6 +124,7 @@ export class MerryScriptService implements Disposable {
   dispose(): void {
     this._onDidChangeScripts.dispose();
     for (const d of this.disposables) d.dispose();
+    this.pubspecWatcher.dispose();
     for (const d of this.externalListenerDisposables) d.dispose();
     this.externalFileWatcher?.dispose();
   }
