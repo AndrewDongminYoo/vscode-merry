@@ -1,77 +1,106 @@
 # Merry Scripts
 
-Run `merry` and `derry` scripts from the VS Code Explorer without bouncing between YAML files and terminals.
+Run `merry` and `derry` scripts directly from VS Code.
 
-This extension turns your Dart or Flutter script definitions into a browsable, runnable UI inside VS Code. It discovers scripts from `pubspec.yaml`, external `merry.yaml` / `derry.yaml` files, shows nested groups and hooks in the Explorer, adds run actions in the source YAML, and can expose scripts as native VS Code tasks.
+Merry Scripts turns your Dart or Flutter script definitions into a browsable UI inside the Explorer, so you can discover, inspect, and run scripts without bouncing between YAML files and terminals.
 
-## Why this extension exists
-
-If your project already uses `merry` or `derry`, the scripts are powerful but easy to forget once the YAML grows. Merry Scripts makes those commands visible where you work every day:
-
-- browse scripts in the Explorer
-- click to run a script immediately
-- inspect nested groups such as `build aab` or `firebase config prod`
-- spot hook scripts like `pretest` and `posttest`
-- jump back to the script source file when you need to edit it
-
-## UI preview and screenshot plan
-
-If you want the README to explain the UX clearly, these are the best screenshots to attach. The placeholders below are intentionally written so you can replace them with real images later without redesigning the document structure.
-
-### 1. Explorer overview
+- Browse scripts in a dedicated Explorer view
+- Run scripts with one click
+- Use CodeLens directly in `pubspec.yaml`, `merry.yaml`, or `derry.yaml`
+- Keep nested groups, hooks, and task workflows visible inside VS Code
 
 ![Explorer overview](assets/readme/01-explorer-overview.png)
 
-This is the main product moment. It immediately shows that the extension is not just a command runner, but a structured script browser inside the VS Code Explorer.
+The Explorer view is the core UX: it surfaces top-level scripts, nested groups such as `build > aab / ipa / apk`, and hook scripts like `pretest` and `posttest` in a way that is much easier to scan than raw YAML.
 
-### 2. YAML source with CodeLens actions
+## Quick start
+
+1. Install the CLI:
+
+```bash
+dart pub global activate merry
+```
+
+2. Install the VS Code extension.
+3. Add scripts to `pubspec.yaml`, or point `scripts:` to `merry.yaml` / `derry.yaml`.
+4. Open the project in VS Code.
+5. Expand **Merry Scripts** in the Explorer and run any script.
+
+Example `pubspec.yaml`:
+
+```yaml
+name: example_app
+description: "Awesome Flutter App"
+
+# https://pub.dev/packages/merry
+scripts: merry.yaml
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.4
+```
+
+Example `merry.yaml`:
+
+```yaml
+pretest:
+  (description): Clean old coverage output
+  (scripts): rm -rf coverage
+
+test:
+  (description): Run Flutter tests with coverage
+  (scripts): flutter test --coverage
+
+build:
+  apk:
+    (description): Build Android APK
+    (scripts): flutter build apk --release
+```
+
+If you already use `derry`, the extension can detect and run it too. When both CLIs are installed, `merry` is preferred.
+
+## Screenshots
+
+### YAML source with CodeLens actions
 
 ![YAML source with CodeLens actions](assets/readme/02-codelens-in-yaml.png)
 
-It shows that users can stay in the script source file and still run commands without switching back to the Explorer.
+Run scripts straight from the source file without switching back to the Explorer.
 
-### 3. Terminal reuse prompt
+### Terminal reuse prompt
 
 ![Terminal reuse prompt](assets/readme/03-terminal-reuse-quickpick.png)
 
-This captures an interaction detail that makes the extension feel polished and practical during repeated runs.
+When `merry.reuseTerminal` is set to `ask`, the extension lets you decide whether to reuse the current terminal or open a new one.
 
-### 4. Missing CLI guidance
+### Missing CLI guidance
 
 ![Missing CLI guidance](assets/readme/04-cli-missing-statusbar.png)
 
-It reassures new users that the extension explains what is wrong and gives them a direct path to fix it.
+If neither `merry` nor `derry` is installed, the extension shows a warning and gives you a direct path to install the CLI.
 
-### 5. VS Code Tasks integration
+### VS Code Tasks integration
 
 ![VS Code Tasks integration](assets/readme/05-vscode-tasks-integration.png)
 
-This helps advanced users understand that the extension is more than a sidebar; it also plugs into native VS Code workflows.
+Runnable scripts can also participate in normal VS Code task workflows.
 
-### Screenshot capture tips
-
-- Use a clean workspace with a realistic `merry.yaml` tree.
-- Prefer one consistent theme across all screenshots.
-- Keep the Explorer, editor, and terminal widths readable rather than artistic.
-- For Marketplace usage, favor screenshots that explain a workflow in 2–3 seconds.
-- If you only add **one** screenshot, make it the Explorer overview.
-
-## What it supports
+## Features
 
 ### Script discovery
 
-The extension activates in workspaces that contain any of the following:
+The extension activates in workspaces that contain:
 
 - `pubspec.yaml`
 - `merry.yaml`
 - `derry.yaml`
 
-It supports both common merry/derry layouts:
+It supports both common layouts:
 
 1. inline `scripts:` inside `pubspec.yaml`
 2. `scripts: merry.yaml` or `scripts: derry.yaml` pointing to an external file
 
-### Explorer-based script browsing
+### Explorer-based browsing
 
 Scripts are rendered in a dedicated **Merry Scripts** view in the Explorer.
 
@@ -87,21 +116,15 @@ You can run scripts by:
 
 - clicking the script item directly
 - using the script item's context menu
-- using the `Run Script` command contributed by the extension
+- using the `Run Script` command
 
-The extension runs scripts in the integrated terminal using:
+The extension runs scripts in the integrated terminal with:
 
 ```bash
 merry run <script path>
 ```
 
-If both CLIs are installed, `merry` is preferred over `derry`.
-
-### Nested script paths
-
-Nested scripts are preserved as space-delimited merry paths.
-
-For example, a YAML structure like this:
+Nested script paths stay space-delimited, so a structure like this:
 
 ```yaml
 build:
@@ -109,7 +132,7 @@ build:
     (scripts): flutter build appbundle --release
 ```
 
-is executed as:
+becomes:
 
 ```bash
 merry run build aab
@@ -137,7 +160,7 @@ This works for:
 
 ### VS Code Tasks integration
 
-The extension also contributes a `merry` task type so runnable scripts can participate in normal VS Code task workflows.
+The extension contributes a `merry` task type so runnable scripts can participate in normal VS Code task workflows.
 
 - leaf scripts become tasks
 - build-like scripts are grouped as **Build** tasks
@@ -149,7 +172,14 @@ Example task definition:
 ```json
 {
   "type": "merry",
-  "script": "build aab"
+  "script": "test",
+  "group": {
+    "kind": "test",
+    "isDefault": true
+  },
+  "problemMatcher": [],
+  "label": "merry: test",
+  "detail": "Runs all tests in the Flutter project without coverage reporting."
 }
 ```
 
@@ -160,7 +190,7 @@ The script tree refreshes when:
 - `pubspec.yaml` changes
 - the external `merry.yaml` / `derry.yaml` file changes
 
-If the workspace contains `merry.yaml` or `derry.yaml` but `pubspec.yaml` does not link it through `scripts:`, the extension shows a helpful message telling you how to connect it.
+If the workspace contains `merry.yaml` or `derry.yaml` but `pubspec.yaml` does not link it through `scripts:`, the extension shows a helpful message explaining how to connect it.
 
 ### Install guidance when the CLI is missing
 
@@ -172,50 +202,6 @@ Instead, it:
 - offers an install prompt
 - can open a terminal with the install command
 - can open the `merry` package page on pub.dev
-
-## Installation
-
-Install the CLI first:
-
-```bash
-dart pub global activate merry
-```
-
-Then install the VS Code extension.
-
-If you already use `derry`, the extension can detect and run it too, but `merry` remains the preferred CLI when both are installed.
-
-## Quick start
-
-1. Add scripts to `pubspec.yaml`, or link an external `merry.yaml` / `derry.yaml` file.
-2. Open the project in VS Code.
-3. Expand the **Merry Scripts** view in the Explorer.
-4. Click any script to run it.
-5. Use **Refresh Scripts** or **Open Script Source** from the view title when needed.
-
-Example `pubspec.yaml`:
-
-```yaml
-name: example_app
-scripts: merry.yaml
-```
-
-Example `merry.yaml`:
-
-```yaml
-pretest:
-  (description): Clean old coverage output
-  (scripts): rm -rf coverage
-
-test:
-  (description): Run Flutter tests with coverage
-  (scripts): flutter test --coverage
-
-build:
-  apk:
-    (description): Build Android APK
-    (scripts): flutter build apk --release
-```
 
 ## Commands
 
