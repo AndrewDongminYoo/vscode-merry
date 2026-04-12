@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
 
+import { MerryScriptService } from "../merry-script-service";
 import { MerryScriptsProvider } from "../merry-scripts-provider";
 import type { ScriptItem } from "../script-item";
 
@@ -29,15 +30,18 @@ async function waitForCommand(
 }
 
 /**
- * Create a provider pointing at the currently open workspace.
- * Uses provider.load() (the new explicit entry point) so the tree is
- * populated synchronously before any assertion runs.
+ * Create a service + provider pointing at the currently open workspace.
+ * Calls service.load() so the tree is populated before any assertion runs.
  */
-async function makeProvider(): Promise<MerryScriptsProvider> {
+async function makeProvider(): Promise<{
+  service: MerryScriptService;
+  provider: MerryScriptsProvider;
+}> {
   const root = vscode.workspace.workspaceFolders![0].uri.fsPath;
-  const provider = new MerryScriptsProvider(root);
-  await provider.load();
-  return provider;
+  const service = new MerryScriptService(root);
+  await service.load();
+  const provider = new MerryScriptsProvider(service);
+  return { service, provider };
 }
 
 // ── Suite ─────────────────────────────────────────────────────────────────
@@ -65,7 +69,7 @@ suite("Integration: Merry Scripts View", () => {
   // ── Tree data: top-level nodes ─────────────────────────────────────────
 
   test("provider returns top-level scripts from test-workspace merry.yaml", async () => {
-    const provider = await makeProvider();
+    const { service, provider } = await makeProvider();
     try {
       const items = provider.getChildren();
       const labels = items.map((i: ScriptItem) => i.node.label);
@@ -89,11 +93,12 @@ suite("Integration: Merry Scripts View", () => {
       }
     } finally {
       provider.dispose();
+      service.dispose();
     }
   });
 
   test("scriptsFilePath resolves to merry.yaml, not pubspec.yaml", async () => {
-    const provider = await makeProvider();
+    const { service, provider } = await makeProvider();
     try {
       const filePath = provider.getScriptsFilePath();
       assert.ok(filePath, "Expected a non-null scripts file path");
@@ -103,13 +108,14 @@ suite("Integration: Merry Scripts View", () => {
       );
     } finally {
       provider.dispose();
+      service.dispose();
     }
   });
 
   // ── Tree data: leaf nodes ──────────────────────────────────────────────
 
   test("'test' script has correct command and is not a hook", async () => {
-    const provider = await makeProvider();
+    const { service, provider } = await makeProvider();
     try {
       const items = provider.getChildren();
       const testItem = items.find((i: ScriptItem) => i.node.label === "test");
@@ -121,11 +127,12 @@ suite("Integration: Merry Scripts View", () => {
       assert.strictEqual(testItem.node.isHook, false);
     } finally {
       provider.dispose();
+      service.dispose();
     }
   });
 
   test("'generate' has description and single command", async () => {
-    const provider = await makeProvider();
+    const { service, provider } = await makeProvider();
     try {
       const items = provider.getChildren();
       const genItem = items.find(
@@ -142,13 +149,14 @@ suite("Integration: Merry Scripts View", () => {
       ]);
     } finally {
       provider.dispose();
+      service.dispose();
     }
   });
 
   // ── Tree data: hooks ───────────────────────────────────────────────────
 
   test("pretest is marked as a hook with arrow-right icon", async () => {
-    const provider = await makeProvider();
+    const { service, provider } = await makeProvider();
     try {
       const items = provider.getChildren();
       const pretest = items.find((i: ScriptItem) => i.node.label === "pretest");
@@ -161,11 +169,12 @@ suite("Integration: Merry Scripts View", () => {
       );
     } finally {
       provider.dispose();
+      service.dispose();
     }
   });
 
   test("posttest is marked as a hook", async () => {
-    const provider = await makeProvider();
+    const { service, provider } = await makeProvider();
     try {
       const items = provider.getChildren();
       const posttest = items.find(
@@ -175,13 +184,14 @@ suite("Integration: Merry Scripts View", () => {
       assert.strictEqual(posttest.node.isHook, true);
     } finally {
       provider.dispose();
+      service.dispose();
     }
   });
 
   // ── Tree data: nested groups ───────────────────────────────────────────
 
   test("'build' is a collapsible group node", async () => {
-    const provider = await makeProvider();
+    const { service, provider } = await makeProvider();
     try {
       const items = provider.getChildren();
       const buildItem = items.find((i: ScriptItem) => i.node.label === "build");
@@ -193,11 +203,12 @@ suite("Integration: Merry Scripts View", () => {
       );
     } finally {
       provider.dispose();
+      service.dispose();
     }
   });
 
   test("'build' group contains aab, ipa, apk children", async () => {
-    const provider = await makeProvider();
+    const { service, provider } = await makeProvider();
     try {
       const items = provider.getChildren();
       const buildItem = items.find((i: ScriptItem) => i.node.label === "build");
@@ -213,11 +224,12 @@ suite("Integration: Merry Scripts View", () => {
       assert.ok(childLabels.includes("apk"));
     } finally {
       provider.dispose();
+      service.dispose();
     }
   });
 
   test("children of 'build' have correct fullPath prefix", async () => {
-    const provider = await makeProvider();
+    const { service, provider } = await makeProvider();
     try {
       const items = provider.getChildren();
       const buildItem = items.find((i: ScriptItem) => i.node.label === "build");
@@ -232,6 +244,7 @@ suite("Integration: Merry Scripts View", () => {
       }
     } finally {
       provider.dispose();
+      service.dispose();
     }
   });
 
@@ -256,20 +269,21 @@ suite("Integration: Merry Scripts View", () => {
   // ── getNodes() ─────────────────────────────────────────────────────────
 
   test("getNodes() returns the same top-level nodes as getChildren()", async () => {
-    const provider = await makeProvider();
+    const { service, provider } = await makeProvider();
     try {
       const fromChildren = provider.getChildren().map((i) => i.node.label);
       const fromNodes = provider.getNodes().map((n) => n.label);
       assert.deepStrictEqual(fromChildren, fromNodes);
     } finally {
       provider.dispose();
+      service.dispose();
     }
   });
 
   // ── Refresh ────────────────────────────────────────────────────────────
 
   test("refresh triggers onDidChangeTreeData", async () => {
-    const provider = await makeProvider();
+    const { service, provider } = await makeProvider();
     try {
       const fired = await new Promise<boolean>((resolve) => {
         const timer = setTimeout(() => resolve(false), 2000);
@@ -287,6 +301,7 @@ suite("Integration: Merry Scripts View", () => {
       );
     } finally {
       provider.dispose();
+      service.dispose();
     }
   });
 });

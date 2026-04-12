@@ -15,6 +15,7 @@ import {
 import { type CliInfo, detectMerryCli, type MerryCli } from "./cli-detector";
 import { Commands } from "./commands";
 import { MerryCodeLensProvider } from "./merry-codelens-provider";
+import { MerryScriptService } from "./merry-script-service";
 import { MerryScriptsProvider } from "./merry-scripts-provider";
 import type { ScriptItem } from "./script-item";
 
@@ -41,10 +42,11 @@ export async function activate(context: ExtensionContext) {
 
   const workspaceRoot = workspaceFolders[0].uri.fsPath;
 
-  // 1. Create provider and await initial load so nodes are ready before
+  // 1. Create service + provider and await initial load so nodes are ready before
   //    registering the tree view (avoids the empty-tree race condition).
-  const provider = new MerryScriptsProvider(workspaceRoot);
-  await provider.load();
+  const service = new MerryScriptService(workspaceRoot);
+  await service.load();
+  const provider = new MerryScriptsProvider(service);
 
   // 2. Register tree view — data is already populated.
   const treeView = window.createTreeView("merryScripts", {
@@ -91,6 +93,7 @@ export async function activate(context: ExtensionContext) {
 
   context.subscriptions.push(
     treeView,
+    service,
     provider,
     provider.onDidChangeTreeData(updateTreeMessage),
     provider.onDidChangeTreeData(checkUnlinkedScriptFile),
