@@ -98,13 +98,15 @@ export async function activate(context: ExtensionContext) {
   ];
 
   context.subscriptions.push(
-    treeView,
-    taskProvider,
+    // Push service first so it is disposed last in LIFO order — providers
+    // must be torn down before the event source they subscribe to.
+    service,
     tasks.registerTaskProvider(MerryTaskProvider.taskType, taskProvider),
+    taskProvider,
+    treeView,
     provider,
     provider.onDidChangeTreeData(updateTreeMessage),
     provider.onDidChangeTreeData(checkUnlinkedScriptFile),
-    service,
     languages.registerCodeLensProvider(docSelector, codeLensProvider),
 
     window.onDidCloseTerminal((closed) => {
