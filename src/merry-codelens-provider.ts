@@ -54,7 +54,7 @@ export class MerryCodeLensProvider implements CodeLensProvider {
         continue;
       }
 
-      const lineIndex = this.findKeyLine(node.label, lines);
+      const lineIndex = this.findKeyLine(node.fullPath.split(" "), lines);
       if (lineIndex === -1) {
         continue;
       }
@@ -76,13 +76,30 @@ export class MerryCodeLensProvider implements CodeLensProvider {
     }
   }
 
-  private findKeyLine(key: string, lines: string[]): number {
-    let pattern = this.regExpCache.get(key);
-    if (!pattern) {
-      const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      pattern = new RegExp(`^\\s*${escaped}\\s*:`);
-      this.regExpCache.set(key, pattern);
+  private findKeyLine(pathSegments: string[], lines: string[]): number {
+    let searchStart = 0;
+    let foundLine = -1;
+
+    for (const segment of pathSegments) {
+      let pattern = this.regExpCache.get(segment);
+      if (!pattern) {
+        const escaped = segment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        pattern = new RegExp(`^\\s*${escaped}\\s*:`);
+        this.regExpCache.set(segment, pattern);
+      }
+
+      foundLine = -1;
+      for (let i = searchStart; i < lines.length; i++) {
+        if (pattern.test(lines[i])) {
+          foundLine = i;
+          searchStart = i + 1;
+          break;
+        }
+      }
+
+      if (foundLine === -1) return -1;
     }
-    return lines.findIndex((line) => pattern.test(line));
+
+    return foundLine;
   }
 }
