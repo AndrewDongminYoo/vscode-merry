@@ -51,7 +51,7 @@ export function executionShellForPlatform(platform: NodeJS.Platform): {
   readonly shellPath: string;
 } {
   return platform === "win32"
-    ? { shell: "cmd", shellPath: "cmd.exe" }
+    ? { shell: "powershell", shellPath: "powershell.exe" }
     : { shell: "posix", shellPath: "/bin/sh" };
 }
 
@@ -69,6 +69,10 @@ export class MerryExecutionService implements Disposable {
   private installPromptAvailable = false;
   private refreshQueue: Promise<void> = Promise.resolve();
   private resolutionFailureFingerprint: string | null = null;
+  private resolutionFailure: Exclude<
+    ToolchainResolution,
+    { kind: "resolved" }
+  > | null = null;
 
   constructor(
     private readonly context: Pick<ExtensionContext, "subscriptions">,
@@ -137,6 +141,7 @@ export class MerryExecutionService implements Disposable {
     if (resolution.kind !== "resolved") {
       this.cliInfo = null;
       this.installPromptAvailable = false;
+      this.resolutionFailure = resolution;
       const fingerprint = JSON.stringify(resolution);
       if (fingerprint !== this.resolutionFailureFingerprint) {
         this.showResolutionFailure(resolution);
@@ -145,6 +150,7 @@ export class MerryExecutionService implements Disposable {
       this.fireIfChanged(previous);
       return;
     }
+    this.resolutionFailure = null;
     this.resolutionFailureFingerprint = null;
     const detection = await this.dependencies.detectCli(resolution);
     this.applyDetection(detection, previous);
@@ -155,6 +161,10 @@ export class MerryExecutionService implements Disposable {
     await this.refresh();
     const info = this.cliInfo;
     if (!info) {
+      if (this.resolutionFailure) {
+        this.showResolutionFailure(this.resolutionFailure);
+        return;
+      }
       if (this.installPromptAvailable) this.promptToInstallMerry();
       return;
     }

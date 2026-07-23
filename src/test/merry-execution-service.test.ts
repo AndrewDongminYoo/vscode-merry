@@ -38,32 +38,21 @@ suite("MerryExecutionService", () => {
     );
   });
 
-  test("quotes cmd metacharacters", () => {
-    assert.strictEqual(
-      formatTerminalCommand(
-        "C:\\External Cache\\merry.bat",
-        "build & echo injected",
-        "cmd",
-      ),
-      '"C:\\External Cache\\merry.bat" "run" "build" "&" "echo" "injected"',
-    );
-  });
-
-  test("preserves percent signs in cmd arguments", () => {
+  test("preserves percent signs in PowerShell arguments", () => {
     assert.strictEqual(
       formatTerminalCommand(
         "C:\\SDK%20\\cache\\bin\\merry.bat",
         "build%20release",
-        "cmd",
+        "powershell",
       ),
-      '"C:\\SDK%20\\cache\\bin\\merry.bat" "run" "build%20release"',
+      "& 'C:\\SDK%20\\cache\\bin\\merry.bat' 'run' 'build%20release'",
     );
   });
 
   test("uses a known shell for each platform", () => {
     assert.deepStrictEqual(executionShellForPlatform("win32"), {
-      shell: "cmd",
-      shellPath: "cmd.exe",
+      shell: "powershell",
+      shellPath: "powershell.exe",
     });
     assert.deepStrictEqual(executionShellForPlatform("darwin"), {
       shell: "posix",
@@ -85,13 +74,13 @@ suite("MerryExecutionService", () => {
     );
   });
 
-  test("reapplies the resolved environment in cmd commands", () => {
+  test("reapplies the resolved environment in PowerShell commands", () => {
     assert.strictEqual(
-      formatTerminalCommand("C:\\cache\\merry.bat", "build", "cmd", {
+      formatTerminalCommand("C:\\cache\\merry.bat", "build", "powershell", {
         PATH: "C:\\flutter\\bin;C:\\cache\\bin",
         PUB_CACHE: "C:\\cache",
       }),
-      'set "PATH=C:\\flutter\\bin;C:\\cache\\bin" && set "PUB_CACHE=C:\\cache" && "C:\\cache\\merry.bat" "run" "build"',
+      "$env:PATH = 'C:\\flutter\\bin;C:\\cache\\bin'; $env:PUB_CACHE = 'C:\\cache'; & 'C:\\cache\\merry.bat' 'run' 'build'",
     );
   });
 

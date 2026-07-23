@@ -60,15 +60,15 @@ export class MerryTaskProvider implements TaskProvider<Task>, Disposable {
       new ShellExecution(
         formatShellCommand(
           [cliInfo.launcherPath, "run", ...node.fullPath.split(/\s+/)],
-          process.platform === "win32" ? "cmd" : "posix",
+          process.platform === "win32" ? "powershell" : "posix",
           commandEnvironment(cliInfo.toolchain.environment),
         ),
         process.platform === "win32"
           ? {
               cwd: this.workspaceRoot,
               env: cliInfo.toolchain.environment,
-              executable: "cmd.exe",
-              shellArgs: ["/d", "/c"],
+              executable: "powershell.exe",
+              shellArgs: ["-NoLogo", "-NoProfile", "-Command"],
             }
           : {
               cwd: this.workspaceRoot,

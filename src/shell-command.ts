@@ -1,4 +1,4 @@
-export type TerminalShell = "posix" | "powershell" | "cmd";
+export type TerminalShell = "posix" | "powershell";
 
 function quotePosix(value: string): string {
   return `'${value.replaceAll("'", "'\"'\"'")}'`;
@@ -6,10 +6,6 @@ function quotePosix(value: string): string {
 
 function quotePowerShell(value: string): string {
   return `'${value.replaceAll("'", "''")}'`;
-}
-
-function quoteCmd(value: string): string {
-  return `"${value.replaceAll('"', '""')}"`;
 }
 
 export function formatShellCommand(
@@ -25,14 +21,6 @@ export function formatShellCommand(
       .map(([key, value]) => `$env:${key} = ${quotePowerShell(value)}`)
       .join("; ");
     return `${assignments}; ${command}`;
-  }
-  if (shell === "cmd") {
-    const command = words.map(quoteCmd).join(" ");
-    if (entries.length === 0) return command;
-    const assignments = entries
-      .map(([key, value]) => `set ${quoteCmd(`${key}=${value}`)}`)
-      .join(" && ");
-    return `${assignments} && ${command}`;
   }
   const command = words.map(quotePosix).join(" ");
   if (entries.length === 0) return command;
