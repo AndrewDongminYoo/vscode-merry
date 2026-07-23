@@ -1,6 +1,9 @@
 import * as assert from "assert";
 
-import { formatTerminalCommand } from "../merry-execution-service";
+import {
+  formatTerminalCommand,
+  terminalShellForProfile,
+} from "../merry-execution-service";
 
 suite("MerryExecutionService", () => {
   test("quotes POSIX launcher and script as separate shell words", () => {
@@ -10,14 +13,14 @@ suite("MerryExecutionService", () => {
         "build release; echo injected",
         "posix",
       ),
-      "'/Volumes/External Cache/bin/merry' 'run' 'build release; echo injected'",
+      "'/Volumes/External Cache/bin/merry' 'run' 'build' 'release;' 'echo' 'injected'",
     );
   });
 
   test("quotes embedded POSIX apostrophes", () => {
     assert.strictEqual(
       formatTerminalCommand("/cache/bin/merry", "customer's build", "posix"),
-      "'/cache/bin/merry' 'run' 'customer'\"'\"'s build'",
+      "'/cache/bin/merry' 'run' 'customer'\"'\"'s' 'build'",
     );
   });
 
@@ -28,7 +31,7 @@ suite("MerryExecutionService", () => {
         "build; Write-Output injected",
         "powershell",
       ),
-      "& 'C:\\External Cache\\merry.bat' 'run' 'build; Write-Output injected'",
+      "& 'C:\\External Cache\\merry.bat' 'run' 'build;' 'Write-Output' 'injected'",
     );
   });
 
@@ -39,7 +42,23 @@ suite("MerryExecutionService", () => {
         "build & echo injected",
         "cmd",
       ),
-      '"C:\\External Cache\\merry.bat" "run" "build & echo injected"',
+      '"C:\\External Cache\\merry.bat" "run" "build" "&" "echo" "injected"',
+    );
+  });
+
+  test("detects POSIX-compatible Windows terminal profiles", () => {
+    assert.strictEqual(terminalShellForProfile("win32", "Git Bash"), "posix");
+    assert.strictEqual(terminalShellForProfile("win32", "WSL"), "posix");
+  });
+
+  test("detects cmd and PowerShell Windows terminal profiles", () => {
+    assert.strictEqual(
+      terminalShellForProfile("win32", "Command Prompt"),
+      "cmd",
+    );
+    assert.strictEqual(
+      terminalShellForProfile("win32", "PowerShell"),
+      "powershell",
     );
   });
 });

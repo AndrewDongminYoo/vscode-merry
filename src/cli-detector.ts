@@ -68,7 +68,7 @@ export async function detectMerryCli(
   if (!packageInfo) return { kind: "not-installed" };
 
   const launcherPath = getLauncherPath(packageInfo.cli, toolchain.pubCache);
-  if (!fs.existsSync(launcherPath)) {
+  if (!isRunnableLauncher(launcherPath)) {
     return {
       kind: "launcher-missing",
       cli: packageInfo.cli,
@@ -83,6 +83,19 @@ export async function detectMerryCli(
       toolchain,
     },
   };
+}
+
+function isRunnableLauncher(launcherPath: string): boolean {
+  try {
+    if (!fs.statSync(launcherPath).isFile()) return false;
+    if (process.platform !== "win32") {
+      fs.accessSync(launcherPath, fs.constants.X_OK);
+    }
+    return true;
+  } catch (error) {
+    if (error instanceof Error) return false;
+    throw error;
+  }
 }
 
 export function parseGlobalList(

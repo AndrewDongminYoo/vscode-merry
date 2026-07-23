@@ -93,13 +93,20 @@ suite("CliDetector › resolved environment", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
+  function writeLauncher(launcher: string, executable = true): void {
+    fs.writeFileSync(launcher, "");
+    if (process.platform !== "win32") {
+      fs.chmodSync(launcher, executable ? 0o755 : 0o644);
+    }
+  }
+
   test("uses the resolved Dart executable and environment", async () => {
     const launcher = path.join(
       toolchain.pubCache,
       "bin",
       process.platform === "win32" ? "merry.bat" : "merry",
     );
-    fs.writeFileSync(launcher, "");
+    writeLauncher(launcher);
     const calls: Array<{
       readonly executable: string;
       readonly args: readonly string[];
@@ -147,6 +154,22 @@ suite("CliDetector › resolved environment", () => {
     });
   });
 
+  test("reports a non-executable POSIX launcher as missing", async function () {
+    if (process.platform === "win32") this.skip();
+    const expectedPath = path.join(toolchain.pubCache, "bin", "merry");
+    writeLauncher(expectedPath, false);
+
+    const result = await detectMerryCli(toolchain, {
+      runGlobalList: async () => "merry 2.0.0\n",
+    });
+
+    assert.deepStrictEqual(result, {
+      kind: "launcher-missing",
+      cli: "merry",
+      expectedPath,
+    });
+  });
+
   test("filesystem fallback preserves merry preference", async () => {
     fs.mkdirSync(path.join(toolchain.pubCache, "global_packages", "derry"), {
       recursive: true,
@@ -159,7 +182,7 @@ suite("CliDetector › resolved environment", () => {
       "bin",
       process.platform === "win32" ? "merry.bat" : "merry",
     );
-    fs.writeFileSync(launcher, "");
+    writeLauncher(launcher);
 
     const result = await detectMerryCli(toolchain, {
       runGlobalList: async () => {

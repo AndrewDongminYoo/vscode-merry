@@ -37,15 +37,20 @@ function classifyWorkspace(workspaceRoot: string): "flutter" | "dart" {
 function runSdkCommand(
   command: string,
   environment: Readonly<Record<string, string>>,
+  workspaceRoot: string,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
-    cp.exec(command, { env: environment, timeout: 5000 }, (error, stdout) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve(stdout);
-    });
+    cp.exec(
+      command,
+      { cwd: workspaceRoot, env: environment, timeout: 5000 },
+      (error, stdout) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(stdout);
+      },
+    );
   });
 }
 
@@ -65,8 +70,7 @@ function resolverInput(workspaceRoot: string): ToolchainResolverInput {
     dartSdkPath: dart.get<string>("sdkPath") || undefined,
     dartGetFlutterSdkCommand:
       dart.get<string>("getFlutterSdkCommand") || undefined,
-    dartGetDartSdkCommand:
-      dart.get<string>("getDartSdkCommand") || undefined,
+    dartGetDartSdkCommand: dart.get<string>("getDartSdkCommand") || undefined,
   };
 }
 
@@ -74,6 +78,7 @@ export function resolveWorkspaceToolchain(
   workspaceRoot: string,
 ): Promise<ToolchainResolution> {
   return resolveToolchainEnvironment(resolverInput(workspaceRoot), {
-    runSdkCommand,
+    runSdkCommand: (command, environment) =>
+      runSdkCommand(command, environment, workspaceRoot),
   });
 }

@@ -24,13 +24,15 @@ export class MerryTaskProvider implements TaskProvider<Task>, Disposable {
     private readonly service: MerryScriptService,
     private readonly workspaceRoot: string,
     private readonly getCliInfo: () => CliInfo | null,
+    private readonly refreshCliInfo: () => Promise<void>,
     onDidChangeCliInfo: Event<void>,
   ) {
     service.onDidChangeScripts(this.invalidateCache, this, this.disposables);
     onDidChangeCliInfo(this.invalidateCache, this, this.disposables);
   }
 
-  provideTasks(): Task[] {
+  async provideTasks(): Promise<Task[]> {
+    await this.refreshCliInfo();
     if (!this.cachedTasks) {
       this.cachedTasks = this.buildTasks();
     }
@@ -62,10 +64,10 @@ export class MerryTaskProvider implements TaskProvider<Task>, Disposable {
         },
         [
           "run",
-          {
-            value: node.fullPath,
+          ...node.fullPath.split(/\s+/).map((segment) => ({
+            value: segment,
             quoting: ShellQuoting.Strong,
-          },
+          })),
         ],
         {
           cwd: this.workspaceRoot,

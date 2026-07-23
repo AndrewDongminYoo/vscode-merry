@@ -204,6 +204,46 @@ suite("ToolchainEnvironment", () => {
     assert.strictEqual(result.sources.dart, "dart-code-setting");
   });
 
+  test("expands forward-slash home paths on Windows", async () => {
+    const homeDirectory = path.join(root, "home");
+    const sdk = path.join(homeDirectory, "standalone");
+    fs.mkdirSync(path.join(sdk, "bin"), { recursive: true });
+    fs.writeFileSync(path.join(sdk, "bin", "dart.exe"), "");
+
+    const result = await resolveToolchainEnvironment(
+      {
+        ...baseInput("dart"),
+        homeDirectory,
+        platform: "win32",
+        dartSdkPath: "~/standalone",
+      },
+      { runSdkCommand: async () => "" },
+    );
+
+    assert.strictEqual(result.kind, "resolved");
+    if (result.kind !== "resolved") return;
+    assert.strictEqual(
+      result.dartExecutable,
+      path.join(sdk, "bin", "dart.exe"),
+    );
+  });
+
+  test("invalid implicit SDK setting falls through to the command", async () => {
+    const selected = makeDartSdk("command-selected");
+    const result = await resolveToolchainEnvironment(
+      {
+        ...baseInput("dart"),
+        dartSdkPath: path.join(root, "missing-sdk"),
+        dartGetDartSdkCommand: "select-dart",
+      },
+      { runSdkCommand: async () => selected },
+    );
+
+    assert.strictEqual(result.kind, "resolved");
+    if (result.kind !== "resolved") return;
+    assert.strictEqual(result.sources.dart, "dart-code-command");
+  });
+
   test("FLUTTER_ROOT remains a fallback", async () => {
     const inherited = makeFlutterSdk("inherited");
     const result = await resolveToolchainEnvironment(
@@ -275,6 +315,92 @@ suite("ToolchainEnvironment", () => {
       path: missingCache,
       reason: "Directory does not exist",
     });
+  });
+
+  test("inaccessible explicit Pub cache is rejected", async function () {
+    if (process.platform === "win32") this.skip();
+    const cache = makeCache("inaccessible-cache");
+    fs.chmodSync(cache, 0o000);
+    const result = await resolveToolchainEnvironment(
+      {
+        ...baseInput("dart"),
+        merryPubCachePath: cache,
+        dartSdkPath: makeDartSdk("standalone"),
+      },
+      { runSdkCommand: async () => "" },
+    );
+    fs.chmodSync(cache, 0o700);
+
+    assert.deepStrictEqual(result, {
+      kind: "pub-cache-unavailable",
+      source: "merry-setting",
+      path: cache,
+      reason: "Directory is not readable and writable",
+    });
+  });
+
+  test("missing default Pub cache remains available for Dart to create", async () => {
+    const input = baseInput("dart");
+    const result = await resolveToolchainEnvironment(
+      {
+        ...input,
+        merryPubCachePath: undefined,
+        dartSdkPath: makeDartSdk("standalone"),
+      },
+      { runSdkCommand: async () => "" },
+    );
+
+    assert.strictEqual(result.kind, "resolved");
+    if (result.kind !== "resolved") return;
+    assert.strictEqual(
+      result.pubCache,
+      path.join(input.homeDirectory, ".pub-cache"),
+    );
+    assert.strictEqual(result.sources.pubCache, "home-default");
+  });
+
+  test("uses the Windows local application data Pub cache default", async () => {
+    const localAppData = path.join(root, "local-app-data");
+    const sdk = path.join(root, "standalone-win");
+    fs.mkdirSync(path.join(sdk, "bin"), { recursive: true });
+    fs.writeFileSync(path.join(sdk, "bin", "dart.exe"), "");
+    const result = await resolveToolchainEnvironment(
+      {
+        ...baseInput("dart"),
+        platform: "win32",
+        merryPubCachePath: undefined,
+        dartSdkPath: sdk,
+        environment: { PATH: "", LOCALAPPDATA: localAppData },
+      },
+      { runSdkCommand: async () => "" },
+    );
+
+    assert.strictEqual(result.kind, "resolved");
+    if (result.kind !== "resolved") return;
+    assert.strictEqual(
+      result.pubCache,
+      path.join(localAppData, "Pub", "Cache"),
+    );
+  });
+
+  test("resolves Dart from PATH and preserves its bin directory", async () => {
+    const sdk = makeDartSdk("path-sdk");
+    const sdkBin = path.join(sdk, "bin");
+    const result = await resolveToolchainEnvironment(
+      {
+        ...baseInput("dart"),
+        environment: { PATH: sdkBin },
+      },
+      { runSdkCommand: async () => "" },
+    );
+
+    assert.strictEqual(result.kind, "resolved");
+    if (result.kind !== "resolved") return;
+    assert.strictEqual(result.sources.dart, "path");
+    assert.strictEqual(
+      result.environment["PATH"]?.split(path.delimiter)[0],
+      sdkBin,
+    );
   });
 
   test("selected Flutter bin precedes Pub cache and inherited PATH", async () => {

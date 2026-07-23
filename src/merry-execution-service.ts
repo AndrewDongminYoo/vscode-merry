@@ -28,7 +28,20 @@ export function formatTerminalCommand(
   scriptPath: string,
   shell: TerminalShell,
 ): string {
-  return formatShellCommand([launcherPath, "run", scriptPath], shell);
+  return formatShellCommand(
+    [launcherPath, "run", ...scriptPath.split(/\s+/)],
+    shell,
+  );
+}
+
+export function terminalShellForProfile(
+  platform: NodeJS.Platform,
+  profile: string,
+): TerminalShell {
+  if (platform !== "win32") return "posix";
+  if (/bash|git bash|msys|cygwin|wsl/i.test(profile)) return "posix";
+  if (/cmd|command prompt/i.test(profile)) return "cmd";
+  return "powershell";
 }
 
 export class MerryExecutionService implements Disposable {
@@ -42,6 +55,8 @@ export class MerryExecutionService implements Disposable {
   private terminalFingerprint: string | null = null;
   private terminalBusy = false;
   private statusBar: StatusBarItem | null = null;
+  private installPromptAvailable = false;
+  private refreshGeneration = 0;
 
   constructor(
     private readonly context: ExtensionContext,
@@ -90,16 +105,20 @@ export class MerryExecutionService implements Disposable {
   }
 
   async refresh(): Promise<void> {
+    const generation = ++this.refreshGeneration;
     const previous = this.cliInfo;
     const resolution = await resolveWorkspaceToolchain(this.workspaceRoot);
+    if (generation !== this.refreshGeneration) return;
     if (resolution.kind !== "resolved") {
       this.cliInfo = null;
+      this.installPromptAvailable = false;
       this.showResolutionFailure(resolution);
       this.fireIfChanged(previous);
       return;
     }
     const detection = await detectMerryCli(resolution);
-    this.applyDetection(detection);
+    if (generation !== this.refreshGeneration) return;
+    this.applyDetection(detection, previous);
     this.fireIfChanged(previous);
   }
 
@@ -107,7 +126,7 @@ export class MerryExecutionService implements Disposable {
     await this.refresh();
     const info = this.cliInfo;
     if (!info) {
-      this.showInstallPrompt();
+      if (this.installPromptAvailable) this.showInstallPrompt();
       return;
     }
     const reuse = workspace
@@ -123,7 +142,11 @@ export class MerryExecutionService implements Disposable {
         ["Reuse existing terminal", "Create new terminal"],
         { placeHolder: "How would you like to run this script?" },
       );
-      shouldReuse = choice === "Reuse existing terminal";
+      shouldReuse =
+        choice === "Reuse existing terminal" &&
+        this.terminal !== null &&
+        !this.terminalBusy &&
+        this.terminalFingerprint === info.toolchain.fingerprint;
     }
     if (!shouldReuse) {
       this.terminal = window.createTerminal({
@@ -184,18 +207,24 @@ export class MerryExecutionService implements Disposable {
     for (const disposable of this.disposables) disposable.dispose();
   }
 
-  private applyDetection(result: CliDetectionResult): void {
+  private applyDetection(
+    result: CliDetectionResult,
+    previous: CliInfo | null,
+  ): void {
     if (result.kind === "detected") {
       this.cliInfo = result.info;
-      this.statusBar?.dispose();
-      this.statusBar = null;
-      const version = result.info.version ? ` v${result.info.version}` : "";
-      window.showInformationMessage(
-        `Merry Scripts: '${result.info.cli}'${version} detected at ${result.info.launcherPath}`,
-      );
+      this.installPromptAvailable = false;
+      this.clearStatus();
+      if (!sameCliInfo(previous, result.info)) {
+        const version = result.info.version ? ` v${result.info.version}` : "";
+        window.showInformationMessage(
+          `Merry Scripts: '${result.info.cli}'${version} detected at ${result.info.launcherPath}`,
+        );
+      }
       return;
     }
     this.cliInfo = null;
+    this.installPromptAvailable = true;
     this.showMissingStatus();
     if (result.kind === "launcher-missing") {
       window.showWarningMessage(
@@ -207,8 +236,11 @@ export class MerryExecutionService implements Disposable {
   private showResolutionFailure(
     result: Exclude<ToolchainResolution, { kind: "resolved" }>,
   ): void {
+    if (result.kind === "workspace-untrusted") {
+      this.clearStatus();
+      return;
+    }
     this.showMissingStatus();
-    if (result.kind === "workspace-untrusted") return;
     if (result.kind === "invalid-configuration") {
       window.showErrorMessage(
         `Merry Scripts: ${result.setting} is invalid: ${result.reason}.`,
@@ -230,6 +262,11 @@ export class MerryExecutionService implements Disposable {
       this.context.subscriptions.push(this.statusBar);
     }
     this.statusBar.show();
+  }
+
+  private clearStatus(): void {
+    this.statusBar?.dispose();
+    this.statusBar = null;
   }
 
   private showInstallPrompt(): void {
@@ -257,10 +294,18 @@ export class MerryExecutionService implements Disposable {
   }
 
   private terminalShell(): TerminalShell {
-    if (process.platform !== "win32") return "posix";
     const profile = workspace
       .getConfiguration("terminal.integrated")
       .get<string>("defaultProfile.windows", "");
-    return /cmd|command prompt/i.test(profile) ? "cmd" : "powershell";
+    return terminalShellForProfile(process.platform, profile);
   }
+}
+
+function sameCliInfo(left: CliInfo | null, right: CliInfo | null): boolean {
+  return (
+    left?.cli === right?.cli &&
+    left?.version === right?.version &&
+    left?.launcherPath === right?.launcherPath &&
+    left?.toolchain.fingerprint === right?.toolchain.fingerprint
+  );
 }

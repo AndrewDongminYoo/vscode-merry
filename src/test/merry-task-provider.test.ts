@@ -11,6 +11,7 @@ suite("MerryTaskProvider", () => {
   let contextChanged: vscode.EventEmitter<void>;
   let workspaceRoot: string;
   let cliInfo: CliInfo;
+  let refreshCount: number;
 
   suiteSetup(async () => {
     await new Promise<void>((resolve) => setTimeout(resolve, 500));
@@ -23,6 +24,7 @@ suite("MerryTaskProvider", () => {
     service = new MerryScriptService(workspaceRoot);
     await service.load();
     contextChanged = new vscode.EventEmitter<void>();
+    refreshCount = 0;
     const pubCache = "/external volume/pub-cache";
     cliInfo = {
       cli: "merry",
@@ -44,6 +46,9 @@ suite("MerryTaskProvider", () => {
       service,
       workspaceRoot,
       () => cliInfo,
+      async () => {
+        refreshCount += 1;
+      },
       contextChanged.event,
     );
   });
@@ -54,8 +59,8 @@ suite("MerryTaskProvider", () => {
     contextChanged.dispose();
   });
 
-  test("provideTasks() returns only leaf nodes (no group nodes)", () => {
-    const taskList = provider.provideTasks();
+  test("provideTasks() returns only leaf nodes (no group nodes)", async () => {
+    const taskList = await provider.provideTasks();
     assert.ok(taskList.length > 0, "should produce tasks");
     // 'build' is a group in test-workspace — must not appear as a task
     const buildGroup = taskList.find((t) => t.name === "build");
@@ -66,15 +71,21 @@ suite("MerryTaskProvider", () => {
     );
   });
 
-  test("each task name equals node fullPath", () => {
-    const taskList = provider.provideTasks();
+  test("re-resolves the CLI context before serving tasks", async () => {
+    await provider.provideTasks();
+    await provider.provideTasks();
+    assert.strictEqual(refreshCount, 2);
+  });
+
+  test("each task name equals node fullPath", async () => {
+    const taskList = await provider.provideTasks();
     // 'build aab' is a nested leaf
     const aab = taskList.find((t) => t.name === "build aab");
     assert.ok(aab, "'build aab' task should exist");
   });
 
-  test("shell execution uses resolved launcher, strong quoting, cwd, and env", () => {
-    const taskList = provider.provideTasks();
+  test("shell execution uses resolved launcher, strong quoting, cwd, and env", async () => {
+    const taskList = await provider.provideTasks();
     const aab = taskList.find((t) => t.name === "build aab");
     assert.ok(aab);
     const exec = aab.execution as vscode.ShellExecution;
@@ -86,7 +97,11 @@ suite("MerryTaskProvider", () => {
     assert.deepStrictEqual(exec.args, [
       "run",
       {
-        value: "build aab",
+        value: "build",
+        quoting: vscode.ShellQuoting.Strong,
+      },
+      {
+        value: "aab",
         quoting: vscode.ShellQuoting.Strong,
       },
     ]);
@@ -97,56 +112,57 @@ suite("MerryTaskProvider", () => {
     );
   });
 
-  test("task source is 'merry'", () => {
-    const taskList = provider.provideTasks();
+  test("task source is 'merry'", async () => {
+    const taskList = await provider.provideTasks();
     for (const t of taskList) {
       assert.strictEqual(t.source, "merry");
     }
   });
 
-  test("'test' task has TaskGroup.Test", () => {
-    const taskList = provider.provideTasks();
+  test("'test' task has TaskGroup.Test", async () => {
+    const taskList = await provider.provideTasks();
     const testTask = taskList.find((t) => t.name === "test");
     assert.ok(testTask, "'test' task should exist");
     assert.deepStrictEqual(testTask.group, vscode.TaskGroup.Test);
   });
 
-  test("'build aab' task has TaskGroup.Build", () => {
-    const taskList = provider.provideTasks();
+  test("'build aab' task has TaskGroup.Build", async () => {
+    const taskList = await provider.provideTasks();
     const aab = taskList.find((t) => t.name === "build aab");
     assert.ok(aab);
     assert.deepStrictEqual(aab.group, vscode.TaskGroup.Build);
   });
 
   test("cachedTasks is invalidated when onDidChangeScripts fires", async () => {
-    const first = provider.provideTasks();
+    const first = await provider.provideTasks();
     service.refresh();
     await new Promise<void>((resolve) => setTimeout(resolve, 200));
-    const second = provider.provideTasks();
+    const second = await provider.provideTasks();
     // After refresh, a new array is built — not the same reference
     assert.notStrictEqual(first, second);
   });
 
-  test("cachedTasks is invalidated when execution context changes", () => {
-    const first = provider.provideTasks();
+  test("cachedTasks is invalidated when execution context changes", async () => {
+    const first = await provider.provideTasks();
     contextChanged.fire();
-    const second = provider.provideTasks();
+    const second = await provider.provideTasks();
     assert.notStrictEqual(first, second);
   });
 
-  test("returns no tasks when no CLI context is available", () => {
+  test("returns no tasks when no CLI context is available", async () => {
     provider.dispose();
     provider = new MerryTaskProvider(
       service,
       workspaceRoot,
       () => null,
+      async () => {},
       contextChanged.event,
     );
-    assert.deepStrictEqual(provider.provideTasks(), []);
+    assert.deepStrictEqual(await provider.provideTasks(), []);
   });
 
-  test("resolveTask returns undefined", () => {
-    const taskList = provider.provideTasks();
+  test("resolveTask returns undefined", async () => {
+    const taskList = await provider.provideTasks();
     const result = provider.resolveTask(taskList[0]);
     assert.strictEqual(result, undefined);
   });

@@ -36,6 +36,7 @@ export async function activate(context: ExtensionContext) {
     service,
     workspaceRoot,
     () => executionService.currentCliInfo,
+    () => executionService.refresh(),
     executionService.onDidChangeCliInfo,
   );
 

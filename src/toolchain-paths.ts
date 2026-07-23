@@ -41,7 +41,7 @@ export function resolveConfiguredPath(
   }
   if (resolved === "~") {
     resolved = input.homeDirectory;
-  } else if (resolved.startsWith(`~${path.sep}`)) {
+  } else if (/^~[\\/]/.test(resolved)) {
     resolved = path.join(input.homeDirectory, resolved.slice(2));
   }
   return {
@@ -79,9 +79,7 @@ export function inspectSdk(
   return null;
 }
 
-export function findOnPath(
-  input: ToolchainResolverInput,
-): SdkCandidate | null {
+export function findOnPath(input: ToolchainResolverInput): SdkCandidate | null {
   const executable = input.platform === "win32" ? "dart.exe" : "dart";
   const entries = input.environment["PATH"]?.split(path.delimiter) ?? [];
   for (const entry of entries) {
@@ -126,7 +124,9 @@ export function buildPath(
       const normalized = caseSensitive ? entry : entry.toLowerCase();
       return (
         entries.findIndex((candidate) => {
-          return (caseSensitive ? candidate : candidate.toLowerCase()) === normalized;
+          return (
+            (caseSensitive ? candidate : candidate.toLowerCase()) === normalized
+          );
         }) === index
       );
     })

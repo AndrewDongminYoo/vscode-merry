@@ -102,9 +102,7 @@ function settingCandidate(
   return inspectSdk(configured.path, "dart-code-setting", input.platform);
 }
 
-function resolveCache(
-  input: ToolchainResolverInput,
-):
+function resolveCache(input: ToolchainResolverInput):
   | {
       readonly kind: "resolved";
       readonly path: string;
@@ -128,7 +126,13 @@ function resolveCache(
     cachePath = path.resolve(input.environment["PUB_CACHE"]);
     source = "environment";
   } else {
-    cachePath = path.join(input.homeDirectory, ".pub-cache");
+    const localAppData =
+      input.environment["LOCALAPPDATA"] ??
+      path.join(input.homeDirectory, "AppData", "Local");
+    cachePath =
+      input.platform === "win32"
+        ? path.join(localAppData, "Pub", "Cache")
+        : path.join(input.homeDirectory, ".pub-cache");
     source = "home-default";
   }
   if (source !== "home-default" && !fs.existsSync(cachePath)) {
@@ -146,6 +150,19 @@ function resolveCache(
       path: cachePath,
       reason: "Path is not a directory",
     };
+  }
+  if (fs.existsSync(cachePath)) {
+    try {
+      fs.accessSync(cachePath, fs.constants.R_OK | fs.constants.W_OK);
+    } catch (error) {
+      if (!(error instanceof Error)) throw error;
+      return {
+        kind: "pub-cache-unavailable",
+        source,
+        path: cachePath,
+        reason: "Directory is not readable and writable",
+      };
+    }
   }
   return { kind: "resolved", path: cachePath, source };
 }
