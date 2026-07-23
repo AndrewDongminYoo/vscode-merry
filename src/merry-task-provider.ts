@@ -2,7 +2,6 @@ import {
   type Disposable,
   type Event,
   ShellExecution,
-  ShellQuoting,
   Task,
   TaskGroup,
   type TaskProvider,
@@ -13,6 +12,7 @@ import {
 import type { CliInfo } from "./cli-detector";
 import type { ScriptNode } from "./merry-parser";
 import type { MerryScriptService } from "./merry-script-service";
+import { formatShellCommand } from "./shell-command";
 
 export class MerryTaskProvider implements TaskProvider<Task>, Disposable {
   static readonly taskType = "merry";
@@ -58,21 +58,24 @@ export class MerryTaskProvider implements TaskProvider<Task>, Disposable {
       node.fullPath,
       MerryTaskProvider.taskType,
       new ShellExecution(
-        {
-          value: cliInfo.launcherPath,
-          quoting: ShellQuoting.Strong,
-        },
-        [
-          "run",
-          ...node.fullPath.split(/\s+/).map((segment) => ({
-            value: segment,
-            quoting: ShellQuoting.Strong,
-          })),
-        ],
-        {
-          cwd: this.workspaceRoot,
-          env: cliInfo.toolchain.environment,
-        },
+        formatShellCommand(
+          [cliInfo.launcherPath, "run", ...node.fullPath.split(/\s+/)],
+          process.platform === "win32" ? "cmd" : "posix",
+          commandEnvironment(cliInfo.toolchain.environment),
+        ),
+        process.platform === "win32"
+          ? {
+              cwd: this.workspaceRoot,
+              env: cliInfo.toolchain.environment,
+              executable: "cmd.exe",
+              shellArgs: ["/d", "/c"],
+            }
+          : {
+              cwd: this.workspaceRoot,
+              env: cliInfo.toolchain.environment,
+              executable: "/bin/sh",
+              shellArgs: ["-c"],
+            },
       ),
     );
     task.detail = node.description ?? node.commands.join(" && ");
@@ -88,6 +91,19 @@ export class MerryTaskProvider implements TaskProvider<Task>, Disposable {
   private invalidateCache(): void {
     this.cachedTasks = undefined;
   }
+}
+
+function commandEnvironment(
+  environment: Readonly<Record<string, string>>,
+): Readonly<Record<string, string>> {
+  const result: Record<string, string> = {
+    PATH: environment["PATH"],
+    PUB_CACHE: environment["PUB_CACHE"],
+  };
+  if (environment["FLUTTER_ROOT"]) {
+    result["FLUTTER_ROOT"] = environment["FLUTTER_ROOT"];
+  }
+  return result;
 }
 
 /** Recursively collect all non-group (runnable) leaf nodes. */

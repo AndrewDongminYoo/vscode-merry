@@ -73,6 +73,7 @@ async function commandCandidate(
   command: string | undefined,
   input: ToolchainResolverInput,
   dependencies: ToolchainResolverDependencies,
+  requireFlutter: boolean,
 ): Promise<SdkCandidate | null> {
   if (!command) return null;
   try {
@@ -85,7 +86,9 @@ async function commandCandidate(
       .map((line) => line.trim())
       .filter(Boolean);
     if (lines.length !== 1) return null;
-    return inspectSdk(lines[0], "dart-code-command", input.platform);
+    const root = path.resolve(input.workspaceRoot, lines[0]);
+    const candidate = inspectSdk(root, "dart-code-command", input.platform);
+    return requireFlutter && !candidate?.flutterRoot ? null : candidate;
   } catch (error) {
     if (error instanceof Error) return null;
     throw error;
@@ -95,11 +98,17 @@ async function commandCandidate(
 function settingCandidate(
   value: string | undefined,
   input: ToolchainResolverInput,
+  requireFlutter: boolean,
 ): SdkCandidate | null {
   if (!value) return null;
   const configured = resolveConfiguredPath(value, input);
   if (configured.kind === "invalid" || !configured.path) return null;
-  return inspectSdk(configured.path, "dart-code-setting", input.platform);
+  const candidate = inspectSdk(
+    configured.path,
+    "dart-code-setting",
+    input.platform,
+  );
+  return requireFlutter && !candidate?.flutterRoot ? null : candidate;
 }
 
 function resolveCache(input: ToolchainResolverInput):
@@ -122,12 +131,12 @@ function resolveCache(input: ToolchainResolverInput):
     }
     cachePath = configured.path;
     source = "merry-setting";
-  } else if (input.environment["PUB_CACHE"]) {
-    cachePath = path.resolve(input.environment["PUB_CACHE"]);
+  } else if (environmentValue(input, "PUB_CACHE")) {
+    cachePath = path.resolve(environmentValue(input, "PUB_CACHE") ?? "");
     source = "environment";
   } else {
     const localAppData =
-      input.environment["LOCALAPPDATA"] ??
+      environmentValue(input, "LOCALAPPDATA") ??
       path.join(input.homeDirectory, "AppData", "Local");
     cachePath =
       input.platform === "win32"
@@ -155,7 +164,11 @@ function resolveCache(input: ToolchainResolverInput):
     };
   }
   try {
-    fs.accessSync(accessTarget, fs.constants.R_OK | fs.constants.W_OK);
+    const accessMode =
+      fs.constants.R_OK |
+      fs.constants.W_OK |
+      (input.platform === "win32" ? 0 : fs.constants.X_OK);
+    fs.accessSync(accessTarget, accessMode);
   } catch (error) {
     if (!(error instanceof Error)) throw error;
     return {
@@ -210,6 +223,19 @@ function deleteEnvironmentValue(
   }
 }
 
+function environmentValue(
+  input: ToolchainResolverInput,
+  name: string,
+): string | undefined {
+  const key =
+    input.platform === "win32"
+      ? Object.keys(input.environment).find(
+          (candidate) => candidate.toLowerCase() === name.toLowerCase(),
+        )
+      : name;
+  return key ? input.environment[key] : undefined;
+}
+
 export async function resolveToolchainEnvironment(
   input: ToolchainResolverInput,
   dependencies: ToolchainResolverDependencies,
@@ -240,12 +266,13 @@ export async function resolveToolchainEnvironment(
   const implicit: Array<() => Promise<SdkCandidate | null>> =
     input.workspaceKind === "flutter"
       ? [
-          async () => settingCandidate(input.dartFlutterSdkPath, input),
+          async () => settingCandidate(input.dartFlutterSdkPath, input, true),
           () =>
             commandCandidate(
               input.dartGetFlutterSdkCommand,
               input,
               dependencies,
+              true,
             ),
           async () =>
             inspectSdk(
@@ -255,9 +282,14 @@ export async function resolveToolchainEnvironment(
             ),
         ]
       : [
-          async () => settingCandidate(input.dartSdkPath, input),
+          async () => settingCandidate(input.dartSdkPath, input, false),
           () =>
-            commandCandidate(input.dartGetDartSdkCommand, input, dependencies),
+            commandCandidate(
+              input.dartGetDartSdkCommand,
+              input,
+              dependencies,
+              false,
+            ),
         ];
   for (const resolveCandidate of implicit) {
     if (selected) break;
@@ -276,6 +308,7 @@ export async function resolveToolchainEnvironment(
   const cache = resolveCache(input);
   if (cache.kind !== "resolved") return cache;
   const environment = definedEnvironment(input.environment);
+  deleteEnvironmentValue(environment, "PUB_CACHE", input.platform === "win32");
   environment["PUB_CACHE"] = cache.path;
   const caseInsensitive = input.platform === "win32";
   if (selected.flutterRoot) {

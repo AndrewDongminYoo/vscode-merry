@@ -23,27 +23,36 @@ import { resolveWorkspaceToolchain } from "./vscode-toolchain-adapter";
 
 export type { TerminalShell } from "./shell-command";
 
+export interface MerryExecutionDependencies {
+  readonly resolveToolchain: typeof resolveWorkspaceToolchain;
+  readonly detectCli: typeof detectMerryCli;
+}
+
+const defaultDependencies: MerryExecutionDependencies = {
+  resolveToolchain: resolveWorkspaceToolchain,
+  detectCli: detectMerryCli,
+};
+
 export function formatTerminalCommand(
   launcherPath: string,
   scriptPath: string,
   shell: TerminalShell,
+  environment: Readonly<Record<string, string>> = {},
 ): string {
   return formatShellCommand(
     [launcherPath, "run", ...scriptPath.split(/\s+/)],
     shell,
+    environment,
   );
 }
 
-export function terminalShellForProfile(
-  platform: NodeJS.Platform,
-  profile: string,
-): TerminalShell {
-  if (platform === "win32") {
-    if (/bash|git bash|msys|cygwin|wsl/i.test(profile)) return "posix";
-    if (/cmd|command prompt/i.test(profile)) return "cmd";
-    return "powershell";
-  }
-  return /powershell|pwsh/i.test(profile) ? "powershell" : "posix";
+export function executionShellForPlatform(platform: NodeJS.Platform): {
+  readonly shell: TerminalShell;
+  readonly shellPath: string;
+} {
+  return platform === "win32"
+    ? { shell: "cmd", shellPath: "cmd.exe" }
+    : { shell: "posix", shellPath: "/bin/sh" };
 }
 
 export class MerryExecutionService implements Disposable {
@@ -58,11 +67,12 @@ export class MerryExecutionService implements Disposable {
   private terminalBusy = false;
   private statusBar: StatusBarItem | null = null;
   private installPromptAvailable = false;
-  private refreshGeneration = 0;
+  private refreshQueue: Promise<void> = Promise.resolve();
 
   constructor(
-    private readonly context: ExtensionContext,
+    private readonly context: Pick<ExtensionContext, "subscriptions">,
     private readonly workspaceRoot: string,
+    private readonly dependencies: MerryExecutionDependencies = defaultDependencies,
   ) {
     this.disposables.push(
       workspace.onDidGrantWorkspaceTrust(() => void this.refresh()),
@@ -107,10 +117,22 @@ export class MerryExecutionService implements Disposable {
   }
 
   async refresh(): Promise<void> {
-    const generation = ++this.refreshGeneration;
+    const operation = this.refreshQueue
+      .catch(() => {})
+      .then(() => this.performRefresh());
+    this.refreshQueue = operation;
+    let observed: Promise<void>;
+    do {
+      observed = this.refreshQueue;
+      await observed;
+    } while (observed !== this.refreshQueue);
+  }
+
+  private async performRefresh(): Promise<void> {
     const previous = this.cliInfo;
-    const resolution = await resolveWorkspaceToolchain(this.workspaceRoot);
-    if (generation !== this.refreshGeneration) return;
+    const resolution = await this.dependencies.resolveToolchain(
+      this.workspaceRoot,
+    );
     if (resolution.kind !== "resolved") {
       this.cliInfo = null;
       this.installPromptAvailable = false;
@@ -118,8 +140,7 @@ export class MerryExecutionService implements Disposable {
       this.fireIfChanged(previous);
       return;
     }
-    const detection = await detectMerryCli(resolution);
-    if (generation !== this.refreshGeneration) return;
+    const detection = await this.dependencies.detectCli(resolution);
     this.applyDetection(detection, previous);
     this.fireIfChanged(previous);
   }
@@ -155,6 +176,7 @@ export class MerryExecutionService implements Disposable {
         name: "Merry Scripts",
         cwd: this.workspaceRoot,
         env: info.toolchain.environment,
+        shellPath: executionShellForPlatform(process.platform).shellPath,
       });
       this.terminalFingerprint = info.toolchain.fingerprint;
     }
@@ -166,12 +188,15 @@ export class MerryExecutionService implements Disposable {
         info.launcherPath,
         scriptPath,
         this.terminalShell(),
+        commandEnvironment(info.toolchain.environment),
       ),
     );
   }
 
   async installMerry(): Promise<void> {
-    const resolution = await resolveWorkspaceToolchain(this.workspaceRoot);
+    const resolution = await this.dependencies.resolveToolchain(
+      this.workspaceRoot,
+    );
     if (resolution.kind !== "resolved") {
       this.showResolutionFailure(resolution);
       return;
@@ -180,6 +205,7 @@ export class MerryExecutionService implements Disposable {
       name: "Merry Install",
       cwd: this.workspaceRoot,
       env: resolution.environment,
+      shellPath: executionShellForPlatform(process.platform).shellPath,
     });
     this.installTerminal = terminal;
     terminal.show();
@@ -187,6 +213,7 @@ export class MerryExecutionService implements Disposable {
       formatShellCommand(
         [resolution.dartExecutable, "pub", "global", "activate", "merry"],
         this.terminalShell(),
+        commandEnvironment(resolution.environment),
       ),
     );
     if (!terminal.shellIntegration) {
@@ -299,17 +326,21 @@ export class MerryExecutionService implements Disposable {
   }
 
   private terminalShell(): TerminalShell {
-    const profileKey =
-      process.platform === "win32"
-        ? "defaultProfile.windows"
-        : process.platform === "darwin"
-          ? "defaultProfile.osx"
-          : "defaultProfile.linux";
-    const profile = workspace
-      .getConfiguration("terminal.integrated")
-      .get<string>(profileKey, "");
-    return terminalShellForProfile(process.platform, profile);
+    return executionShellForPlatform(process.platform).shell;
   }
+}
+
+function commandEnvironment(
+  environment: Readonly<Record<string, string>>,
+): Readonly<Record<string, string>> {
+  const result: Record<string, string> = {
+    PATH: environment["PATH"],
+    PUB_CACHE: environment["PUB_CACHE"],
+  };
+  if (environment["FLUTTER_ROOT"]) {
+    result["FLUTTER_ROOT"] = environment["FLUTTER_ROOT"];
+  }
+  return result;
 }
 
 function sameCliInfo(left: CliInfo | null, right: CliInfo | null): boolean {

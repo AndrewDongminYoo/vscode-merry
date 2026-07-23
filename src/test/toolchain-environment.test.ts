@@ -152,6 +152,54 @@ suite("ToolchainEnvironment", () => {
     assert.strictEqual(result.sources.dart, "dart-code-command");
   });
 
+  test("Flutter setting rejects standalone Dart and falls back to FVM", async () => {
+    const fvm = makeFlutterSdk(path.join(".fvm", "flutter_sdk"));
+    const result = await resolveToolchainEnvironment(
+      {
+        ...baseInput(),
+        dartFlutterSdkPath: makeDartSdk("standalone"),
+      },
+      { runSdkCommand: async () => "" },
+    );
+
+    assert.strictEqual(result.kind, "resolved");
+    if (result.kind !== "resolved") return;
+    assert.strictEqual(result.flutterRoot, fvm);
+    assert.strictEqual(result.sources.dart, "fvm");
+  });
+
+  test("Flutter command rejects standalone Dart and falls back to FVM", async () => {
+    const fvm = makeFlutterSdk(path.join(".fvm", "flutter_sdk"));
+    const result = await resolveToolchainEnvironment(
+      {
+        ...baseInput(),
+        dartGetFlutterSdkCommand: "select-flutter",
+      },
+      { runSdkCommand: async () => makeDartSdk("standalone") },
+    );
+
+    assert.strictEqual(result.kind, "resolved");
+    if (result.kind !== "resolved") return;
+    assert.strictEqual(result.flutterRoot, fvm);
+    assert.strictEqual(result.sources.dart, "fvm");
+  });
+
+  test("resolves relative SDK command output from the workspace", async () => {
+    const selected = makeFlutterSdk(path.join(".fvm", "command-sdk"));
+    const result = await resolveToolchainEnvironment(
+      {
+        ...baseInput(),
+        dartGetFlutterSdkCommand: "select-flutter",
+      },
+      { runSdkCommand: async () => ".fvm/command-sdk" },
+    );
+
+    assert.strictEqual(result.kind, "resolved");
+    if (result.kind !== "resolved") return;
+    assert.strictEqual(result.flutterRoot, selected);
+    assert.strictEqual(result.sources.dart, "dart-code-command");
+  });
+
   test("Flutter workspace falls back to FVM", async () => {
     const fvm = makeFlutterSdk(path.join(".fvm", "flutter_sdk"));
     const result = await resolveToolchainEnvironment(baseInput(), {
@@ -349,6 +397,28 @@ suite("ToolchainEnvironment", () => {
     });
   });
 
+  test("Pub cache requires directory search permission", async function () {
+    if (process.platform === "win32") this.skip();
+    const cache = makeCache("no-search-cache");
+    fs.chmodSync(cache, 0o666);
+    const result = await resolveToolchainEnvironment(
+      {
+        ...baseInput("dart"),
+        merryPubCachePath: cache,
+        dartSdkPath: makeDartSdk("standalone"),
+      },
+      { runSdkCommand: async () => "" },
+    );
+    fs.chmodSync(cache, 0o700);
+
+    assert.deepStrictEqual(result, {
+      kind: "pub-cache-unavailable",
+      source: "merry-setting",
+      path: cache,
+      reason: "Directory is not readable and writable",
+    });
+  });
+
   test("missing default Pub cache remains available for Dart to create", async () => {
     const input = baseInput("dart");
     const result = await resolveToolchainEnvironment(
@@ -422,6 +492,58 @@ suite("ToolchainEnvironment", () => {
         merryPubCachePath: undefined,
         dartSdkPath: sdk,
         environment: { PATH: "", LOCALAPPDATA: localAppData },
+      },
+      { runSdkCommand: async () => "" },
+    );
+
+    assert.strictEqual(result.kind, "resolved");
+    if (result.kind !== "resolved") return;
+    assert.strictEqual(
+      result.pubCache,
+      path.join(localAppData, "Pub", "Cache"),
+    );
+  });
+
+  test("resolves mixed-case Windows Pub environment variables", async () => {
+    const sdk = path.join(root, "standalone-win");
+    fs.mkdirSync(path.join(sdk, "bin"), { recursive: true });
+    fs.writeFileSync(path.join(sdk, "bin", "dart.exe"), "");
+    const cache = makeCache("mixed-case-cache");
+    const result = await resolveToolchainEnvironment(
+      {
+        ...baseInput("dart"),
+        platform: "win32",
+        merryPubCachePath: undefined,
+        dartSdkPath: sdk,
+        environment: {
+          Path: "",
+          Pub_Cache: cache,
+          LocalAppData: path.join(root, "unused-local-app-data"),
+        },
+      },
+      { runSdkCommand: async () => "" },
+    );
+
+    assert.strictEqual(result.kind, "resolved");
+    if (result.kind !== "resolved") return;
+    assert.strictEqual(result.pubCache, cache);
+    assert.strictEqual(result.sources.pubCache, "environment");
+    assert.strictEqual(result.environment["Pub_Cache"], undefined);
+    assert.strictEqual(result.environment["PUB_CACHE"], cache);
+  });
+
+  test("resolves mixed-case Windows local application data", async () => {
+    const sdk = path.join(root, "standalone-win-local-data");
+    fs.mkdirSync(path.join(sdk, "bin"), { recursive: true });
+    fs.writeFileSync(path.join(sdk, "bin", "dart.exe"), "");
+    const localAppData = path.join(root, "mixed-local-app-data");
+    const result = await resolveToolchainEnvironment(
+      {
+        ...baseInput("dart"),
+        platform: "win32",
+        merryPubCachePath: undefined,
+        dartSdkPath: sdk,
+        environment: { Path: "", LocalAppData: localAppData },
       },
       { runSdkCommand: async () => "" },
     );

@@ -84,28 +84,19 @@ suite("MerryTaskProvider", () => {
     assert.ok(aab, "'build aab' task should exist");
   });
 
-  test("shell execution uses resolved launcher, strong quoting, cwd, and env", async () => {
+  test("shell execution uses resolved launcher, environment, cwd, and shell", async () => {
     const taskList = await provider.provideTasks();
     const aab = taskList.find((t) => t.name === "build aab");
     assert.ok(aab);
     const exec = aab.execution as vscode.ShellExecution;
     assert.ok(exec instanceof vscode.ShellExecution);
-    assert.deepStrictEqual(exec.command, {
-      value: cliInfo.launcherPath,
-      quoting: vscode.ShellQuoting.Strong,
-    });
-    assert.deepStrictEqual(exec.args, [
-      "run",
-      {
-        value: "build",
-        quoting: vscode.ShellQuoting.Strong,
-      },
-      {
-        value: "aab",
-        quoting: vscode.ShellQuoting.Strong,
-      },
-    ]);
+    assert.strictEqual(
+      exec.commandLine,
+      "env 'PATH=/toolchain/bin' 'PUB_CACHE=/cache' '/cache/bin/merry' 'run' 'build' 'aab'",
+    );
     assert.strictEqual(exec.options?.cwd, workspaceRoot);
+    assert.strictEqual(exec.options?.executable, "/bin/sh");
+    assert.deepStrictEqual(exec.options?.shellArgs, ["-c"]);
     assert.strictEqual(
       exec.options?.env?.["PUB_CACHE"],
       cliInfo.toolchain.pubCache,

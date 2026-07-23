@@ -1,9 +1,12 @@
 import * as assert from "assert";
 
+import type { CliInfo } from "../cli-detector";
 import {
+  executionShellForPlatform,
   formatTerminalCommand,
-  terminalShellForProfile,
+  MerryExecutionService,
 } from "../merry-execution-service";
+import type { ResolvedToolchainEnvironment } from "../toolchain-environment";
 
 suite("MerryExecutionService", () => {
   test("quotes POSIX launcher and script as separate shell words", () => {
@@ -46,28 +49,107 @@ suite("MerryExecutionService", () => {
     );
   });
 
-  test("detects POSIX-compatible Windows terminal profiles", () => {
-    assert.strictEqual(terminalShellForProfile("win32", "Git Bash"), "posix");
-    assert.strictEqual(terminalShellForProfile("win32", "WSL"), "posix");
+  test("uses a known shell for each platform", () => {
+    assert.deepStrictEqual(executionShellForPlatform("win32"), {
+      shell: "cmd",
+      shellPath: "cmd.exe",
+    });
+    assert.deepStrictEqual(executionShellForPlatform("darwin"), {
+      shell: "posix",
+      shellPath: "/bin/sh",
+    });
+    assert.deepStrictEqual(executionShellForPlatform("linux"), {
+      shell: "posix",
+      shellPath: "/bin/sh",
+    });
   });
 
-  test("detects cmd and PowerShell Windows terminal profiles", () => {
+  test("reapplies the resolved environment in POSIX commands", () => {
     assert.strictEqual(
-      terminalShellForProfile("win32", "Command Prompt"),
-      "cmd",
-    );
-    assert.strictEqual(
-      terminalShellForProfile("win32", "PowerShell"),
-      "powershell",
+      formatTerminalCommand("/cache/bin/merry", "build", "posix", {
+        PATH: "/flutter/bin:/cache/bin",
+        PUB_CACHE: "/cache",
+      }),
+      "env 'PATH=/flutter/bin:/cache/bin' 'PUB_CACHE=/cache' '/cache/bin/merry' 'run' 'build'",
     );
   });
 
-  test("detects PowerShell profiles on macOS and Linux", () => {
+  test("reapplies the resolved environment in cmd commands", () => {
     assert.strictEqual(
-      terminalShellForProfile("darwin", "PowerShell"),
-      "powershell",
+      formatTerminalCommand("C:\\cache\\merry.bat", "build", "cmd", {
+        PATH: "C:\\flutter\\bin;C:\\cache\\bin",
+        PUB_CACHE: "C:\\cache",
+      }),
+      'set "PATH=C:\\flutter\\bin;C:\\cache\\bin" && set "PUB_CACHE=C:\\cache" && "C:\\cache\\merry.bat" "run" "build"',
     );
-    assert.strictEqual(terminalShellForProfile("linux", "pwsh"), "powershell");
-    assert.strictEqual(terminalShellForProfile("darwin", "zsh"), "posix");
+  });
+
+  test("superseded refresh callers wait for the latest context", async () => {
+    const firstDeferred = deferred<ResolvedToolchainEnvironment>();
+    const first = toolchain("first");
+    const second = toolchain("second");
+    let resolutionCount = 0;
+    const service = new MerryExecutionService(
+      { subscriptions: [] },
+      "/workspace",
+      {
+        resolveToolchain: async () => {
+          resolutionCount += 1;
+          return resolutionCount === 1 ? firstDeferred.promise : second;
+        },
+        detectCli: async (resolved) => detected(resolved),
+      },
+    );
+
+    const firstRefresh = service.refresh();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    const secondRefresh = service.refresh();
+    firstDeferred.resolve(first);
+    await firstRefresh;
+
+    assert.strictEqual(service.currentCliInfo?.toolchain.fingerprint, "second");
+    await secondRefresh;
+    service.dispose();
   });
 });
+
+function deferred<T>(): {
+  readonly promise: Promise<T>;
+  readonly resolve: (value: T) => void;
+} {
+  let complete = (_value: T): void => {
+    throw new Error("Deferred promise was not initialized");
+  };
+  const promise = new Promise<T>((resolve) => {
+    complete = resolve;
+  });
+  return { promise, resolve: (value) => complete(value) };
+}
+
+function toolchain(fingerprint: string): ResolvedToolchainEnvironment {
+  return {
+    kind: "resolved",
+    dartExecutable: "/dart/bin/dart",
+    pubCache: "/cache",
+    environment: {
+      PATH: "/dart/bin:/cache/bin",
+      PUB_CACHE: "/cache",
+    },
+    sources: { dart: "path", pubCache: "merry-setting" },
+    fingerprint,
+  };
+}
+
+function detected(toolchain: ResolvedToolchainEnvironment): {
+  readonly kind: "detected";
+  readonly info: CliInfo;
+} {
+  return {
+    kind: "detected",
+    info: {
+      cli: "merry",
+      launcherPath: "/cache/bin/merry",
+      toolchain,
+    },
+  };
+}
