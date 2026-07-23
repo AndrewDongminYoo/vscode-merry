@@ -282,14 +282,13 @@ export class MerryExecutionService implements Disposable {
   private showResolutionFailure(
     result: Exclude<ToolchainResolution, { kind: "resolved" }>,
   ): void {
+    this.clearStatus();
     if (result.kind === "workspace-untrusted") {
-      this.clearStatus();
       window.showWarningMessage(
         "Merry Scripts: trust this workspace to resolve Dart and run scripts.",
       );
       return;
     }
-    this.showMissingStatus();
     if (result.kind === "invalid-configuration") {
       window.showErrorMessage(
         `Merry Scripts: ${result.setting} is invalid: ${result.reason}.`,

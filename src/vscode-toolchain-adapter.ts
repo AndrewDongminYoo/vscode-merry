@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as yaml from "js-yaml";
 import * as os from "os";
 import * as path from "path";
-import { workspace } from "vscode";
+import { Uri, workspace } from "vscode";
 
 import {
   resolveToolchainEnvironment,
@@ -55,8 +55,9 @@ function runSdkCommand(
 }
 
 function resolverInput(workspaceRoot: string): ToolchainResolverInput {
-  const merry = workspace.getConfiguration("merry");
-  const dart = workspace.getConfiguration("dart");
+  const resource = Uri.file(workspaceRoot);
+  const merry = workspace.getConfiguration("merry", resource);
+  const dart = workspace.getConfiguration("dart", resource);
   return {
     workspaceRoot,
     workspaceTrusted: workspace.isTrusted,
