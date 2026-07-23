@@ -95,15 +95,12 @@ export class MerryTaskProvider implements TaskProvider<Task>, Disposable {
 
 function commandEnvironment(
   environment: Readonly<Record<string, string>>,
-): Readonly<Record<string, string>> {
-  const result: Record<string, string> = {
+): Readonly<Record<string, string | null>> {
+  return {
     PATH: environment["PATH"],
     PUB_CACHE: environment["PUB_CACHE"],
+    FLUTTER_ROOT: environment["FLUTTER_ROOT"] ?? null,
   };
-  if (environment["FLUTTER_ROOT"]) {
-    result["FLUTTER_ROOT"] = environment["FLUTTER_ROOT"];
-  }
-  return result;
 }
 
 /** Recursively collect all non-group (runnable) leaf nodes. */

@@ -92,10 +92,11 @@ export function findOnPath(input: ToolchainResolverInput): SdkCandidate | null {
     : [];
   for (const entry of entries) {
     if (!entry) continue;
-    const dartExecutable = path.join(entry, executable);
+    const absoluteEntry = path.resolve(entry);
+    const dartExecutable = path.join(absoluteEntry, executable);
     if (isRunnableFile(dartExecutable, input.platform)) {
       return {
-        root: path.dirname(entry),
+        root: path.dirname(absoluteEntry),
         dartExecutable,
         source: "path",
       };

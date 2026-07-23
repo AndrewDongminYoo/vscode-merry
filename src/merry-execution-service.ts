@@ -37,7 +37,7 @@ export function formatTerminalCommand(
   launcherPath: string,
   scriptPath: string,
   shell: TerminalShell,
-  environment: Readonly<Record<string, string>> = {},
+  environment: Readonly<Record<string, string | null>> = {},
 ): string {
   return formatShellCommand(
     [launcherPath, "run", ...scriptPath.split(/\s+/)],
@@ -191,7 +191,7 @@ export class MerryExecutionService implements Disposable {
       this.terminal = window.createTerminal({
         name: "Merry Scripts",
         cwd: this.workspaceRoot,
-        env: info.toolchain.environment,
+        env: terminalEnvironment(info.toolchain.environment),
         shellPath: executionShellForPlatform(process.platform).shellPath,
       });
       this.terminalFingerprint = info.toolchain.fingerprint;
@@ -221,7 +221,7 @@ export class MerryExecutionService implements Disposable {
     const terminal = window.createTerminal({
       name: "Merry Install",
       cwd: this.workspaceRoot,
-      env: resolution.environment,
+      env: terminalEnvironment(resolution.environment),
       shellPath: executionShellForPlatform(process.platform).shellPath,
     });
     this.installTerminal = terminal;
@@ -348,15 +348,21 @@ export class MerryExecutionService implements Disposable {
 
 function commandEnvironment(
   environment: Readonly<Record<string, string>>,
-): Readonly<Record<string, string>> {
-  const result: Record<string, string> = {
+): Readonly<Record<string, string | null>> {
+  return {
     PATH: environment["PATH"],
     PUB_CACHE: environment["PUB_CACHE"],
+    FLUTTER_ROOT: environment["FLUTTER_ROOT"] ?? null,
   };
-  if (environment["FLUTTER_ROOT"]) {
-    result["FLUTTER_ROOT"] = environment["FLUTTER_ROOT"];
-  }
-  return result;
+}
+
+function terminalEnvironment(
+  environment: Readonly<Record<string, string>>,
+): Record<string, string | null> {
+  return {
+    ...environment,
+    FLUTTER_ROOT: environment["FLUTTER_ROOT"] ?? null,
+  };
 }
 
 function sameCliInfo(left: CliInfo | null, right: CliInfo | null): boolean {

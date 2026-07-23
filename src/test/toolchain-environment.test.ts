@@ -576,6 +576,27 @@ suite("ToolchainEnvironment", () => {
     );
   });
 
+  test("absolutizes a PATH-discovered Dart SDK", async () => {
+    const sdk = makeDartSdk("relative-path-sdk");
+    const sdkBin = path.join(sdk, "bin");
+    const relativeSdkBin = path.relative(process.cwd(), sdkBin);
+    const result = await resolveToolchainEnvironment(
+      {
+        ...baseInput("dart"),
+        environment: { PATH: relativeSdkBin },
+      },
+      { runSdkCommand: async () => "" },
+    );
+
+    assert.strictEqual(result.kind, "resolved");
+    if (result.kind !== "resolved") return;
+    assert.strictEqual(result.dartExecutable, path.join(sdkBin, "dart"));
+    assert.strictEqual(
+      result.environment["PATH"]?.split(path.delimiter)[0],
+      sdkBin,
+    );
+  });
+
   test("preserves inherited Windows Path entries with canonical casing", async () => {
     const sdk = path.join(root, "standalone-win");
     fs.mkdirSync(path.join(sdk, "bin"), { recursive: true });

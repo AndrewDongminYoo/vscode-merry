@@ -70,7 +70,18 @@ suite("MerryExecutionService", () => {
         PATH: "/flutter/bin:/cache/bin",
         PUB_CACHE: "/cache",
       }),
-      "env 'PATH=/flutter/bin:/cache/bin' 'PUB_CACHE=/cache' '/cache/bin/merry' 'run' 'build'",
+      "PATH='/flutter/bin:/cache/bin' PUB_CACHE='/cache' '/cache/bin/merry' 'run' 'build'",
+    );
+  });
+
+  test("unsets inherited variables in POSIX commands", () => {
+    assert.strictEqual(
+      formatTerminalCommand("/cache/bin/merry", "build", "posix", {
+        PATH: "/dart/bin:/cache/bin",
+        PUB_CACHE: "/cache",
+        FLUTTER_ROOT: null,
+      }),
+      "unset FLUTTER_ROOT; PATH='/dart/bin:/cache/bin' PUB_CACHE='/cache' '/cache/bin/merry' 'run' 'build'",
     );
   });
 
