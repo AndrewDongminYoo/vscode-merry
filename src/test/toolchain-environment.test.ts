@@ -638,6 +638,29 @@ suite("ToolchainEnvironment", () => {
     assert.ok(result.environment["PATH"]?.includes(sdkBin));
   });
 
+  test("discovers a Flutter SDK from its Windows Dart launcher", async () => {
+    const flutter = makeFlutterSdk("path-flutter-win");
+    const flutterBin = path.join(flutter, "bin");
+    fs.writeFileSync(path.join(flutterBin, "dart.bat"), "");
+    fs.writeFileSync(
+      path.join(flutterBin, "cache", "dart-sdk", "bin", "dart.exe"),
+      "",
+    );
+    const result = await resolveToolchainEnvironment(
+      {
+        ...baseInput(),
+        platform: "win32",
+        environment: { Path: flutterBin },
+      },
+      { runSdkCommand: async () => "" },
+    );
+
+    assert.strictEqual(result.kind, "resolved");
+    if (result.kind !== "resolved") return;
+    assert.strictEqual(result.sources.dart, "path");
+    assert.strictEqual(result.flutterRoot, flutter);
+  });
+
   test("standalone Dart removes an inherited Flutter root", async () => {
     const result = await resolveToolchainEnvironment(
       {

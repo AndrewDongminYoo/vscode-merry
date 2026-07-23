@@ -95,7 +95,7 @@ suite("MerryTaskProvider", () => {
       `unset FLUTTER_ROOT; PATH='${cliInfo.toolchain.environment["PATH"]}' PUB_CACHE='${cliInfo.toolchain.pubCache}' '${cliInfo.launcherPath}' 'run' 'build' 'aab'`,
     );
     assert.strictEqual(exec.options?.cwd, workspaceRoot);
-    assert.strictEqual(exec.options?.executable, "/bin/sh");
+    assert.strictEqual(exec.options?.executable, "/bin/bash");
     assert.deepStrictEqual(exec.options?.shellArgs, ["-c"]);
     assert.strictEqual(
       exec.options?.env?.["PUB_CACHE"],

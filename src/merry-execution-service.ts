@@ -52,7 +52,7 @@ export function executionShellForPlatform(platform: NodeJS.Platform): {
 } {
   return platform === "win32"
     ? { shell: "powershell", shellPath: "powershell.exe" }
-    : { shell: "posix", shellPath: "/bin/sh" };
+    : { shell: "posix", shellPath: "/bin/bash" };
 }
 
 export class MerryExecutionService implements Disposable {
@@ -119,6 +119,7 @@ export class MerryExecutionService implements Disposable {
 
   async initialize(): Promise<void> {
     await this.refresh();
+    if (this.installPromptAvailable) this.promptToInstallMerry();
   }
 
   async refresh(): Promise<void> {

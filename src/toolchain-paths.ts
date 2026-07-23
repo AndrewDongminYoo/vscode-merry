@@ -93,6 +93,17 @@ export function findOnPath(input: ToolchainResolverInput): SdkCandidate | null {
   for (const entry of entries) {
     if (!entry) continue;
     const absoluteEntry = path.resolve(entry);
+    if (input.platform === "win32") {
+      const flutterLauncher = path.join(absoluteEntry, "dart.bat");
+      if (isRunnableFile(flutterLauncher, input.platform)) {
+        const flutter = inspectSdk(
+          path.dirname(absoluteEntry),
+          "path",
+          input.platform,
+        );
+        if (flutter?.flutterRoot) return flutter;
+      }
+    }
     const dartExecutable = path.join(absoluteEntry, executable);
     if (isRunnableFile(dartExecutable, input.platform)) {
       return {

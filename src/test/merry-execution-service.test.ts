@@ -56,11 +56,11 @@ suite("MerryExecutionService", () => {
     });
     assert.deepStrictEqual(executionShellForPlatform("darwin"), {
       shell: "posix",
-      shellPath: "/bin/sh",
+      shellPath: "/bin/bash",
     });
     assert.deepStrictEqual(executionShellForPlatform("linux"), {
       shell: "posix",
-      shellPath: "/bin/sh",
+      shellPath: "/bin/bash",
     });
   });
 

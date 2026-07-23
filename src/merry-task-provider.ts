@@ -73,7 +73,7 @@ export class MerryTaskProvider implements TaskProvider<Task>, Disposable {
           : {
               cwd: this.workspaceRoot,
               env: cliInfo.toolchain.environment,
-              executable: "/bin/sh",
+              executable: "/bin/bash",
               shellArgs: ["-c"],
             },
       ),
