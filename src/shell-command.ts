@@ -1,4 +1,22 @@
+import * as fs from "fs";
+
 export type TerminalShell = "posix" | "powershell";
+
+export function executionShellForPlatform(
+  platform: NodeJS.Platform,
+  pathExists: (path: string) => boolean = fs.existsSync,
+): {
+  readonly shell: TerminalShell;
+  readonly shellPath: string;
+} {
+  if (platform === "win32") {
+    return { shell: "powershell", shellPath: "powershell.exe" };
+  }
+  return {
+    shell: "posix",
+    shellPath: pathExists("/bin/bash") ? "/bin/bash" : "/bin/sh",
+  };
+}
 
 function quotePosix(value: string): string {
   return `'${value.replaceAll("'", "'\"'\"'")}'`;

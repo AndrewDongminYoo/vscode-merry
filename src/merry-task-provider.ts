@@ -12,7 +12,7 @@ import {
 import type { CliInfo } from "./cli-detector";
 import type { ScriptNode } from "./merry-parser";
 import type { MerryScriptService } from "./merry-script-service";
-import { formatShellCommand } from "./shell-command";
+import { executionShellForPlatform, formatShellCommand } from "./shell-command";
 
 export class MerryTaskProvider implements TaskProvider<Task>, Disposable {
   static readonly taskType = "merry";
@@ -52,6 +52,7 @@ export class MerryTaskProvider implements TaskProvider<Task>, Disposable {
   }
 
   private nodeToTask(node: ScriptNode, cliInfo: CliInfo): Task {
+    const executionShell = executionShellForPlatform(process.platform);
     const task = new Task(
       { type: MerryTaskProvider.taskType, script: node.fullPath },
       TaskScope.Workspace,
@@ -60,7 +61,7 @@ export class MerryTaskProvider implements TaskProvider<Task>, Disposable {
       new ShellExecution(
         formatShellCommand(
           [cliInfo.launcherPath, "run", ...node.fullPath.split(/\s+/)],
-          process.platform === "win32" ? "powershell" : "posix",
+          executionShell.shell,
           commandEnvironment(cliInfo.toolchain.environment),
         ),
         process.platform === "win32"
@@ -73,7 +74,7 @@ export class MerryTaskProvider implements TaskProvider<Task>, Disposable {
           : {
               cwd: this.workspaceRoot,
               env: cliInfo.toolchain.environment,
-              executable: "/bin/bash",
+              executable: executionShell.shellPath,
               shellArgs: ["-c"],
             },
       ),

@@ -393,8 +393,25 @@ suite("ToolchainEnvironment", () => {
       kind: "pub-cache-unavailable",
       source: "merry-setting",
       path: cache,
-      reason: "Directory is not readable and writable",
+      reason: "Directory is not readable or searchable",
     });
+  });
+
+  test("existing read-only Pub cache remains usable", async function () {
+    if (process.platform === "win32") this.skip();
+    const cache = makeCache("read-only-cache");
+    fs.chmodSync(cache, 0o555);
+    const result = await resolveToolchainEnvironment(
+      {
+        ...baseInput("dart"),
+        merryPubCachePath: cache,
+        dartSdkPath: makeDartSdk("read-only-cache-sdk"),
+      },
+      { runSdkCommand: async () => "" },
+    );
+    fs.chmodSync(cache, 0o700);
+
+    assert.strictEqual(result.kind, "resolved");
   });
 
   test("Pub cache requires directory search permission", async function () {
@@ -415,7 +432,7 @@ suite("ToolchainEnvironment", () => {
       kind: "pub-cache-unavailable",
       source: "merry-setting",
       path: cache,
-      reason: "Directory is not readable and writable",
+      reason: "Directory is not readable or searchable",
     });
   });
 

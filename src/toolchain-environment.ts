@@ -152,6 +152,7 @@ function resolveCache(input: ToolchainResolverInput):
       reason: "Path is not a directory",
     };
   }
+  const cacheExists = fs.existsSync(cachePath);
   const accessTarget = fs.existsSync(cachePath)
     ? cachePath
     : nearestExistingParent(cachePath);
@@ -166,7 +167,7 @@ function resolveCache(input: ToolchainResolverInput):
   try {
     const accessMode =
       fs.constants.R_OK |
-      fs.constants.W_OK |
+      (cacheExists ? 0 : fs.constants.W_OK) |
       (input.platform === "win32" ? 0 : fs.constants.X_OK);
     fs.accessSync(accessTarget, accessMode);
   } catch (error) {
@@ -175,8 +176,8 @@ function resolveCache(input: ToolchainResolverInput):
       kind: "pub-cache-unavailable",
       source,
       path: cachePath,
-      reason: fs.existsSync(cachePath)
-        ? "Directory is not readable and writable"
+      reason: cacheExists
+        ? "Directory is not readable or searchable"
         : "Parent directory is not readable and writable",
     };
   }

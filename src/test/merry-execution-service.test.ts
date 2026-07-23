@@ -62,6 +62,13 @@ suite("MerryExecutionService", () => {
       shell: "posix",
       shellPath: "/bin/bash",
     });
+    assert.deepStrictEqual(
+      executionShellForPlatform("linux", () => false),
+      {
+        shell: "posix",
+        shellPath: "/bin/sh",
+      },
+    );
   });
 
   test("reapplies the resolved environment in POSIX commands", () => {

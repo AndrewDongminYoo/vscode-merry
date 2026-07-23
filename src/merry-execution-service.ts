@@ -1,3 +1,5 @@
+import * as fs from "fs";
+import * as path from "path";
 import {
   type Disposable,
   env,
@@ -17,11 +19,16 @@ import {
   detectMerryCli,
 } from "./cli-detector";
 import { Commands } from "./commands";
-import { formatShellCommand, type TerminalShell } from "./shell-command";
+import {
+  executionShellForPlatform,
+  formatShellCommand,
+  type TerminalShell,
+} from "./shell-command";
 import type { ToolchainResolution } from "./toolchain-environment";
 import { resolveWorkspaceToolchain } from "./vscode-toolchain-adapter";
 
 export type { TerminalShell } from "./shell-command";
+export { executionShellForPlatform } from "./shell-command";
 
 export interface MerryExecutionDependencies {
   readonly resolveToolchain: typeof resolveWorkspaceToolchain;
@@ -46,15 +53,6 @@ export function formatTerminalCommand(
   );
 }
 
-export function executionShellForPlatform(platform: NodeJS.Platform): {
-  readonly shell: TerminalShell;
-  readonly shellPath: string;
-} {
-  return platform === "win32"
-    ? { shell: "powershell", shellPath: "powershell.exe" }
-    : { shell: "posix", shellPath: "/bin/bash" };
-}
-
 export class MerryExecutionService implements Disposable {
   private readonly contextChanged = new EventEmitter<void>();
   readonly onDidChangeCliInfo = this.contextChanged.event;
@@ -67,8 +65,10 @@ export class MerryExecutionService implements Disposable {
   private terminalBusy = false;
   private statusBar: StatusBarItem | null = null;
   private installPromptAvailable = false;
-  private refreshQueue: Promise<void> = Promise.resolve();
+  private refreshInFlight: Promise<void> | null = null;
+  private refreshPending = false;
   private resolutionFailureFingerprint: string | null = null;
+  private cliProblemFingerprint: string | null = null;
   private resolutionFailure: Exclude<
     ToolchainResolution,
     { kind: "resolved" }
@@ -123,15 +123,21 @@ export class MerryExecutionService implements Disposable {
   }
 
   async refresh(): Promise<void> {
-    const operation = this.refreshQueue
-      .catch(() => {})
-      .then(() => this.performRefresh());
-    this.refreshQueue = operation;
-    let observed: Promise<void>;
+    if (this.refreshInFlight) {
+      this.refreshPending = true;
+      return this.refreshInFlight;
+    }
+    this.refreshInFlight = this.runRefreshLoop().finally(() => {
+      this.refreshInFlight = null;
+    });
+    return this.refreshInFlight;
+  }
+
+  private async runRefreshLoop(): Promise<void> {
     do {
-      observed = this.refreshQueue;
-      await observed;
-    } while (observed !== this.refreshQueue);
+      this.refreshPending = false;
+      await this.performRefresh();
+    } while (this.refreshPending);
   }
 
   private async performRefresh(): Promise<void> {
@@ -143,6 +149,7 @@ export class MerryExecutionService implements Disposable {
       this.cliInfo = null;
       this.installPromptAvailable = false;
       this.resolutionFailure = resolution;
+      this.cliProblemFingerprint = null;
       const fingerprint = JSON.stringify(resolution);
       if (fingerprint !== this.resolutionFailureFingerprint) {
         this.showResolutionFailure(resolution);
@@ -219,6 +226,16 @@ export class MerryExecutionService implements Disposable {
       this.showResolutionFailure(resolution);
       return;
     }
+    const installTarget = nearestExistingPath(resolution.pubCache);
+    try {
+      fs.accessSync(installTarget, fs.constants.W_OK);
+    } catch (error) {
+      if (!(error instanceof Error)) throw error;
+      window.showErrorMessage(
+        `Merry Scripts: Pub cache is not writable for installation at ${resolution.pubCache}: ${error.message}.`,
+      );
+      return;
+    }
     const terminal = window.createTerminal({
       name: "Merry Install",
       cwd: this.workspaceRoot,
@@ -261,6 +278,7 @@ export class MerryExecutionService implements Disposable {
     if (result.kind === "detected") {
       this.cliInfo = result.info;
       this.installPromptAvailable = false;
+      this.cliProblemFingerprint = null;
       this.clearStatus();
       if (!sameCliInfo(previous, result.info)) {
         const version = result.info.version ? ` v${result.info.version}` : "";
@@ -274,9 +292,15 @@ export class MerryExecutionService implements Disposable {
     this.installPromptAvailable = true;
     this.showMissingStatus();
     if (result.kind === "launcher-missing") {
-      window.showWarningMessage(
-        `Merry Scripts: '${result.cli}' is registered but its launcher is missing at ${result.expectedPath}.`,
-      );
+      const fingerprint = JSON.stringify(result);
+      if (fingerprint !== this.cliProblemFingerprint) {
+        window.showWarningMessage(
+          `Merry Scripts: '${result.cli}' is registered but its launcher is missing at ${result.expectedPath}.`,
+        );
+      }
+      this.cliProblemFingerprint = fingerprint;
+    } else {
+      this.cliProblemFingerprint = result.kind;
     }
   }
 
@@ -345,6 +369,16 @@ export class MerryExecutionService implements Disposable {
   private terminalShell(): TerminalShell {
     return executionShellForPlatform(process.platform).shell;
   }
+}
+
+function nearestExistingPath(target: string): string {
+  let candidate = target;
+  while (!fs.existsSync(candidate)) {
+    const parent = path.dirname(candidate);
+    if (parent === candidate) return candidate;
+    candidate = parent;
+  }
+  return candidate;
 }
 
 function commandEnvironment(
