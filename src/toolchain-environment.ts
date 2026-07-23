@@ -13,10 +13,7 @@ import {
 
 export type { ToolchainSource } from "./toolchain-paths";
 
-export type PubCacheSource =
-  | "merry-setting"
-  | "environment"
-  | "home-default";
+export type PubCacheSource = "merry-setting" | "environment" | "home-default";
 
 export interface ToolchainResolverInput {
   readonly workspaceRoot: string;
@@ -95,10 +92,24 @@ async function commandCandidate(
   }
 }
 
+function settingCandidate(
+  value: string | undefined,
+  input: ToolchainResolverInput,
+): SdkCandidate | null {
+  if (!value) return null;
+  const configured = resolveConfiguredPath(value, input);
+  if (configured.kind === "invalid" || !configured.path) return null;
+  return inspectSdk(configured.path, "dart-code-setting", input.platform);
+}
+
 function resolveCache(
   input: ToolchainResolverInput,
 ):
-  | { readonly kind: "resolved"; readonly path: string; readonly source: PubCacheSource }
+  | {
+      readonly kind: "resolved";
+      readonly path: string;
+      readonly source: PubCacheSource;
+    }
   | Exclude<ToolchainResolution, ResolvedToolchainEnvironment> {
   let cachePath: string;
   let source: PubCacheSource;
@@ -169,14 +180,7 @@ export async function resolveToolchainEnvironment(
   const implicit: Array<() => Promise<SdkCandidate | null>> =
     input.workspaceKind === "flutter"
       ? [
-          async () =>
-            input.dartFlutterSdkPath
-              ? inspectSdk(
-                  path.resolve(input.workspaceRoot, input.dartFlutterSdkPath),
-                  "dart-code-setting",
-                  input.platform,
-                )
-              : null,
+          async () => settingCandidate(input.dartFlutterSdkPath, input),
           () =>
             commandCandidate(
               input.dartGetFlutterSdkCommand,
@@ -191,14 +195,7 @@ export async function resolveToolchainEnvironment(
             ),
         ]
       : [
-          async () =>
-            input.dartSdkPath
-              ? inspectSdk(
-                  path.resolve(input.workspaceRoot, input.dartSdkPath),
-                  "dart-code-setting",
-                  input.platform,
-                )
-              : null,
+          async () => settingCandidate(input.dartSdkPath, input),
           () =>
             commandCandidate(input.dartGetDartSdkCommand, input, dependencies),
         ];

@@ -37,7 +37,9 @@ async function makeProvider(): Promise<{
   service: MerryScriptService;
   provider: MerryScriptsProvider;
 }> {
-  const root = vscode.workspace.workspaceFolders![0].uri.fsPath;
+  const folder = vscode.workspace.workspaceFolders?.[0];
+  assert.ok(folder);
+  const root = folder.uri.fsPath;
   const service = new MerryScriptService(root);
   await service.load();
   const provider = new MerryScriptsProvider(service);
@@ -64,6 +66,19 @@ suite("Integration: Merry Scripts View", () => {
       cmds.includes("merry.openScriptSource"),
       "openScriptSource command",
     );
+  });
+
+  test("extension contributes Dart and Pub environment settings", () => {
+    const extension = vscode.extensions.getExtension(
+      "dongminyu.vscode-merry-scripts",
+    );
+    assert.ok(extension);
+    const properties =
+      extension.packageJSON.contributes.configuration.properties;
+    assert.strictEqual(properties["merry.dartSdkPath"].type, "string");
+    assert.strictEqual(properties["merry.dartSdkPath"].scope, "window");
+    assert.strictEqual(properties["merry.pubCachePath"].type, "string");
+    assert.strictEqual(properties["merry.pubCachePath"].scope, "window");
   });
 
   // ── Tree data: top-level nodes ─────────────────────────────────────────
@@ -287,7 +302,7 @@ suite("Integration: Merry Scripts View", () => {
     try {
       const fired = await new Promise<boolean>((resolve) => {
         const timer = setTimeout(() => resolve(false), 2000);
-        const sub = provider.onDidChangeTreeData!(() => {
+        const sub = provider.onDidChangeTreeData(() => {
           clearTimeout(timer);
           sub.dispose();
           resolve(true);

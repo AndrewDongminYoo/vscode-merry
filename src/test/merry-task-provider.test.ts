@@ -1,27 +1,57 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
 
+import type { CliInfo } from "../cli-detector";
 import { MerryScriptService } from "../merry-script-service";
 import { MerryTaskProvider } from "../merry-task-provider";
 
 suite("MerryTaskProvider", () => {
   let service: MerryScriptService;
   let provider: MerryTaskProvider;
+  let contextChanged: vscode.EventEmitter<void>;
+  let workspaceRoot: string;
+  let cliInfo: CliInfo;
 
   suiteSetup(async () => {
     await new Promise<void>((resolve) => setTimeout(resolve, 500));
   });
 
   setup(async () => {
-    const root = vscode.workspace.workspaceFolders![0].uri.fsPath;
-    service = new MerryScriptService(root);
+    const folder = vscode.workspace.workspaceFolders?.[0];
+    assert.ok(folder);
+    workspaceRoot = folder.uri.fsPath;
+    service = new MerryScriptService(workspaceRoot);
     await service.load();
-    provider = new MerryTaskProvider(service, () => "merry");
+    contextChanged = new vscode.EventEmitter<void>();
+    const pubCache = "/external volume/pub-cache";
+    cliInfo = {
+      cli: "merry",
+      launcherPath: `${pubCache}/bin/merry`,
+      toolchain: {
+        kind: "resolved",
+        dartExecutable: "/flutter/bin/cache/dart-sdk/bin/dart",
+        flutterRoot: "/flutter",
+        pubCache,
+        environment: {
+          PATH: `/flutter/bin:${pubCache}/bin`,
+          PUB_CACHE: pubCache,
+        },
+        sources: { dart: "fvm", pubCache: "merry-setting" },
+        fingerprint: "task-fixture",
+      },
+    };
+    provider = new MerryTaskProvider(
+      service,
+      workspaceRoot,
+      () => cliInfo,
+      contextChanged.event,
+    );
   });
 
   teardown(() => {
     provider.dispose();
     service.dispose();
+    contextChanged.dispose();
   });
 
   test("provideTasks() returns only leaf nodes (no group nodes)", () => {
@@ -43,14 +73,27 @@ suite("MerryTaskProvider", () => {
     assert.ok(aab, "'build aab' task should exist");
   });
 
-  test("shell execution uses correct cli and fullPath", () => {
+  test("shell execution uses resolved launcher, strong quoting, cwd, and env", () => {
     const taskList = provider.provideTasks();
-    const aab = taskList.find((t) => t.name === "build aab")!;
+    const aab = taskList.find((t) => t.name === "build aab");
+    assert.ok(aab);
     const exec = aab.execution as vscode.ShellExecution;
     assert.ok(exec instanceof vscode.ShellExecution);
-    assert.ok(
-      (exec.commandLine ?? "").includes("merry run build aab"),
-      `command should contain 'merry run build aab', got: ${exec.commandLine}`,
+    assert.deepStrictEqual(exec.command, {
+      value: cliInfo.launcherPath,
+      quoting: vscode.ShellQuoting.Strong,
+    });
+    assert.deepStrictEqual(exec.args, [
+      "run",
+      {
+        value: "build aab",
+        quoting: vscode.ShellQuoting.Strong,
+      },
+    ]);
+    assert.strictEqual(exec.options?.cwd, workspaceRoot);
+    assert.strictEqual(
+      exec.options?.env?.["PUB_CACHE"],
+      cliInfo.toolchain.pubCache,
     );
   });
 
@@ -65,12 +108,13 @@ suite("MerryTaskProvider", () => {
     const taskList = provider.provideTasks();
     const testTask = taskList.find((t) => t.name === "test");
     assert.ok(testTask, "'test' task should exist");
-    assert.deepStrictEqual(testTask!.group, vscode.TaskGroup.Test);
+    assert.deepStrictEqual(testTask.group, vscode.TaskGroup.Test);
   });
 
   test("'build aab' task has TaskGroup.Build", () => {
     const taskList = provider.provideTasks();
-    const aab = taskList.find((t) => t.name === "build aab")!;
+    const aab = taskList.find((t) => t.name === "build aab");
+    assert.ok(aab);
     assert.deepStrictEqual(aab.group, vscode.TaskGroup.Build);
   });
 
@@ -81,6 +125,24 @@ suite("MerryTaskProvider", () => {
     const second = provider.provideTasks();
     // After refresh, a new array is built — not the same reference
     assert.notStrictEqual(first, second);
+  });
+
+  test("cachedTasks is invalidated when execution context changes", () => {
+    const first = provider.provideTasks();
+    contextChanged.fire();
+    const second = provider.provideTasks();
+    assert.notStrictEqual(first, second);
+  });
+
+  test("returns no tasks when no CLI context is available", () => {
+    provider.dispose();
+    provider = new MerryTaskProvider(
+      service,
+      workspaceRoot,
+      () => null,
+      contextChanged.event,
+    );
+    assert.deepStrictEqual(provider.provideTasks(), []);
   });
 
   test("resolveTask returns undefined", () => {

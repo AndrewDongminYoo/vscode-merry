@@ -122,6 +122,18 @@
           ],
           "default": "never",
           "description": "Terminal reuse behavior when running merry scripts."
+        },
+        "merry.dartSdkPath": {
+          "type": "string",
+          "default": "",
+          "scope": "window",
+          "description": "Dart or Flutter SDK root used for Merry detection and execution. Supports ~, ${workspaceFolder}, and ${env:NAME}."
+        },
+        "merry.pubCachePath": {
+          "type": "string",
+          "default": "",
+          "scope": "window",
+          "description": "Pub cache root used for Merry detection and execution. Supports ~, ${workspaceFolder}, and ${env:NAME}."
         }
       }
     },

@@ -8,7 +8,8 @@ export default defineConfig([
   },
   {
     // Integration tests — open test-workspace so the extension activates
-    files: "out/test/integration.test.js",
+    files:
+      "out/test/{integration,merry-task-provider,merry-execution-service}.test.js",
     workspaceFolder: "./test-workspace",
   },
 ]);

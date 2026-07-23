@@ -179,6 +179,31 @@ suite("ToolchainEnvironment", () => {
     assert.strictEqual(result.sources.dart, "dart-code-setting");
   });
 
+  test("Dart Code SDK settings expand the user home directory", async () => {
+    const homeDirectory = path.join(root, "home");
+    const sdk = path.join(homeDirectory, "standalone");
+    const executable = process.platform === "win32" ? "dart.exe" : "dart";
+    fs.mkdirSync(path.join(sdk, "bin"), { recursive: true });
+    fs.writeFileSync(path.join(sdk, "bin", executable), "");
+
+    const result = await resolveToolchainEnvironment(
+      {
+        ...baseInput("dart"),
+        homeDirectory,
+        dartSdkPath: `~${path.sep}standalone`,
+      },
+      { runSdkCommand: async () => "" },
+    );
+
+    assert.strictEqual(result.kind, "resolved");
+    if (result.kind !== "resolved") return;
+    assert.strictEqual(
+      result.dartExecutable,
+      path.join(sdk, "bin", executable),
+    );
+    assert.strictEqual(result.sources.dart, "dart-code-setting");
+  });
+
   test("FLUTTER_ROOT remains a fallback", async () => {
     const inherited = makeFlutterSdk("inherited");
     const result = await resolveToolchainEnvironment(
@@ -212,11 +237,7 @@ suite("ToolchainEnvironment", () => {
     if (result.kind !== "resolved") return;
     assert.strictEqual(
       result.dartExecutable,
-      path.join(
-        sdk,
-        "bin",
-        process.platform === "win32" ? "dart.exe" : "dart",
-      ),
+      path.join(sdk, "bin", process.platform === "win32" ? "dart.exe" : "dart"),
     );
     assert.strictEqual(result.pubCache, cache);
   });

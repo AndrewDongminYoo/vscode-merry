@@ -63,16 +63,18 @@ Each entry in the scripts map:
 
 ```log
 activate()
-  └→ detectMerryCli()              (cli-detector.ts)
-       ├→ dart pub global list     merry > derry priority
-       └→ ~/.pub-cache fallback    when dart not on PATH
-             │
-             ├─ null → showInstallPrompt()
-             │          ├─ "Install merry" → terminal: dart pub global activate merry
-             │          └─ "Open pub.dev"  → browser: pub.dev/packages/merry
-             │
-             └─ "merry"|"derry"
-                    │
+  └→ trusted workspace
+       └→ resolve SDK              Merry setting > Dart Code > FVM > environment/PATH
+            └→ resolve PUB_CACHE   Merry setting > environment > ~/.pub-cache
+                 └→ detect CLI     absolute Dart + resolved environment
+                      └→ require   absolute <PUB_CACHE>/bin/merry|derry launcher
+                           ├→ missing → install guidance
+                           └→ detected
+                                └→ shared execution context
+                                     ├→ Explorer terminal
+                                     ├→ VS Code Tasks
+                                     └→ installation
+
 pubspec.yaml  ──parseMerryScripts()──▶  ScriptNode[]   (merry-parser.ts)
                                               │
                                         ScriptItem[]   (script-item.ts)
@@ -83,8 +85,11 @@ pubspec.yaml  ──parseMerryScripts()──▶  ScriptNode[]   (merry-parser.t
                                               │
                                merry.runScript command
                                               │
-                               <cli> run <fullPath>  ← integrated terminal
+                          <absolute-cli> run <fullPath>  ← resolved environment
 ```
+
+An explicit or inherited inaccessible `PUB_CACHE` is blocking and does not fall back silently.
+Untrusted workspaces render scripts but do not execute SDK selection commands, Dart, Merry, or Derry.
 
 ### FileSystemWatcher strategy
 
