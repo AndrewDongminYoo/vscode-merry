@@ -92,7 +92,7 @@ suite("MerryTaskProvider", () => {
     assert.ok(exec instanceof vscode.ShellExecution);
     assert.strictEqual(
       exec.commandLine,
-      "env 'PATH=/toolchain/bin' 'PUB_CACHE=/cache' '/cache/bin/merry' 'run' 'build' 'aab'",
+      `env 'PATH=${cliInfo.toolchain.environment["PATH"]}' 'PUB_CACHE=${cliInfo.toolchain.pubCache}' '${cliInfo.launcherPath}' 'run' 'build' 'aab'`,
     );
     assert.strictEqual(exec.options?.cwd, workspaceRoot);
     assert.strictEqual(exec.options?.executable, "/bin/sh");
