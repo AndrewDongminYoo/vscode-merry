@@ -68,6 +68,7 @@ export class MerryExecutionService implements Disposable {
   private statusBar: StatusBarItem | null = null;
   private installPromptAvailable = false;
   private refreshQueue: Promise<void> = Promise.resolve();
+  private resolutionFailureFingerprint: string | null = null;
 
   constructor(
     private readonly context: Pick<ExtensionContext, "subscriptions">,
@@ -136,10 +137,15 @@ export class MerryExecutionService implements Disposable {
     if (resolution.kind !== "resolved") {
       this.cliInfo = null;
       this.installPromptAvailable = false;
-      this.showResolutionFailure(resolution);
+      const fingerprint = JSON.stringify(resolution);
+      if (fingerprint !== this.resolutionFailureFingerprint) {
+        this.showResolutionFailure(resolution);
+        this.resolutionFailureFingerprint = fingerprint;
+      }
       this.fireIfChanged(previous);
       return;
     }
+    this.resolutionFailureFingerprint = null;
     const detection = await this.dependencies.detectCli(resolution);
     this.applyDetection(detection, previous);
     this.fireIfChanged(previous);
@@ -149,7 +155,7 @@ export class MerryExecutionService implements Disposable {
     await this.refresh();
     const info = this.cliInfo;
     if (!info) {
-      if (this.installPromptAvailable) this.showInstallPrompt();
+      if (this.installPromptAvailable) this.promptToInstallMerry();
       return;
     }
     const reuse = workspace
@@ -183,6 +189,7 @@ export class MerryExecutionService implements Disposable {
     const target = this.terminal;
     if (!target) return;
     target.show();
+    this.terminalBusy = true;
     target.sendText(
       formatTerminalCommand(
         info.launcherPath,
@@ -193,7 +200,7 @@ export class MerryExecutionService implements Disposable {
     );
   }
 
-  async installMerry(): Promise<void> {
+  private async installMerry(): Promise<void> {
     const resolution = await this.dependencies.resolveToolchain(
       this.workspaceRoot,
     );
@@ -301,7 +308,7 @@ export class MerryExecutionService implements Disposable {
     this.statusBar = null;
   }
 
-  private showInstallPrompt(): void {
+  promptToInstallMerry(): void {
     window
       .showInformationMessage(
         "Merry Scripts: neither 'merry' nor 'derry' is executable in the resolved Pub cache.",

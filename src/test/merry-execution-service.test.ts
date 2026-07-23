@@ -49,6 +49,17 @@ suite("MerryExecutionService", () => {
     );
   });
 
+  test("preserves percent signs in cmd arguments", () => {
+    assert.strictEqual(
+      formatTerminalCommand(
+        "C:\\SDK%20\\cache\\bin\\merry.bat",
+        "build%20release",
+        "cmd",
+      ),
+      '"C:\\SDK%20\\cache\\bin\\merry.bat" "run" "build%20release"',
+    );
+  });
+
   test("uses a known shell for each platform", () => {
     assert.deepStrictEqual(executionShellForPlatform("win32"), {
       shell: "cmd",

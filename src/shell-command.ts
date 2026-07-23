@@ -9,7 +9,7 @@ function quotePowerShell(value: string): string {
 }
 
 function quoteCmd(value: string): string {
-  return `"${value.replaceAll("%", "%%").replaceAll('"', '""')}"`;
+  return `"${value.replaceAll('"', '""')}"`;
 }
 
 export function formatShellCommand(

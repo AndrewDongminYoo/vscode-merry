@@ -91,7 +91,7 @@ export async function activate(context: ExtensionContext) {
     provider.onDidChangeTreeData(checkUnlinkedScriptFile),
     languages.registerCodeLensProvider(documentSelector, codeLensProvider),
     commands.registerCommand(Commands.installCli, () => {
-      void executionService.installMerry();
+      executionService.promptToInstallMerry();
     }),
     commands.registerCommand(Commands.runScript, async (item: ScriptItem) => {
       if (!item || item.node.isGroup) return;
