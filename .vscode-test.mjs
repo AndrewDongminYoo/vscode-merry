@@ -4,7 +4,7 @@ export default defineConfig([
   {
     // Unit tests — no workspace required
     files:
-      "out/test/{extension,merry-parser,cli-detector,merry-codelens-provider}.test.js",
+      "out/test/{extension,merry-parser,cli-detector,merry-codelens-provider,toolchain-environment}.test.js",
   },
   {
     // Integration tests — open test-workspace so the extension activates
