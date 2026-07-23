@@ -31,7 +31,6 @@ export async function activate(context: ExtensionContext) {
   await service.load();
   const provider = new MerryScriptsProvider(service);
   const executionService = new MerryExecutionService(context, workspaceRoot);
-  await executionService.initialize();
   const taskProvider = new MerryTaskProvider(
     service,
     workspaceRoot,
@@ -107,6 +106,7 @@ export async function activate(context: ExtensionContext) {
       if (filePath) void window.showTextDocument(Uri.file(filePath));
     }),
   );
+  void executionService.initialize();
 }
 
 export function deactivate() {}

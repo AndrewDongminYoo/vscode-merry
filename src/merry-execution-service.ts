@@ -38,10 +38,12 @@ export function terminalShellForProfile(
   platform: NodeJS.Platform,
   profile: string,
 ): TerminalShell {
-  if (platform !== "win32") return "posix";
-  if (/bash|git bash|msys|cygwin|wsl/i.test(profile)) return "posix";
-  if (/cmd|command prompt/i.test(profile)) return "cmd";
-  return "powershell";
+  if (platform === "win32") {
+    if (/bash|git bash|msys|cygwin|wsl/i.test(profile)) return "posix";
+    if (/cmd|command prompt/i.test(profile)) return "cmd";
+    return "powershell";
+  }
+  return /powershell|pwsh/i.test(profile) ? "powershell" : "posix";
 }
 
 export class MerryExecutionService implements Disposable {
@@ -238,6 +240,9 @@ export class MerryExecutionService implements Disposable {
   ): void {
     if (result.kind === "workspace-untrusted") {
       this.clearStatus();
+      window.showWarningMessage(
+        "Merry Scripts: trust this workspace to resolve Dart and run scripts.",
+      );
       return;
     }
     this.showMissingStatus();
@@ -294,9 +299,15 @@ export class MerryExecutionService implements Disposable {
   }
 
   private terminalShell(): TerminalShell {
+    const profileKey =
+      process.platform === "win32"
+        ? "defaultProfile.windows"
+        : process.platform === "darwin"
+          ? "defaultProfile.osx"
+          : "defaultProfile.linux";
     const profile = workspace
       .getConfiguration("terminal.integrated")
-      .get<string>("defaultProfile.windows", "");
+      .get<string>(profileKey, "");
     return terminalShellForProfile(process.platform, profile);
   }
 }

@@ -61,4 +61,13 @@ suite("MerryExecutionService", () => {
       "powershell",
     );
   });
+
+  test("detects PowerShell profiles on macOS and Linux", () => {
+    assert.strictEqual(
+      terminalShellForProfile("darwin", "PowerShell"),
+      "powershell",
+    );
+    assert.strictEqual(terminalShellForProfile("linux", "pwsh"), "powershell");
+    assert.strictEqual(terminalShellForProfile("darwin", "zsh"), "posix");
+  });
 });

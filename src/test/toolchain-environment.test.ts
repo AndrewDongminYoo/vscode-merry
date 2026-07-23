@@ -29,6 +29,12 @@ suite("ToolchainEnvironment", () => {
       path.join(sdk, "bin", "cache", "dart-sdk", "bin", executable),
       "",
     );
+    if (process.platform !== "win32") {
+      fs.chmodSync(
+        path.join(sdk, "bin", "cache", "dart-sdk", "bin", executable),
+        0o755,
+      );
+    }
     return sdk;
   }
 
@@ -37,6 +43,9 @@ suite("ToolchainEnvironment", () => {
     const executable = process.platform === "win32" ? "dart.exe" : "dart";
     fs.mkdirSync(path.join(sdk, "bin"), { recursive: true });
     fs.writeFileSync(path.join(sdk, "bin", executable), "");
+    if (process.platform !== "win32") {
+      fs.chmodSync(path.join(sdk, "bin", executable), 0o755);
+    }
     return sdk;
   }
 
@@ -185,6 +194,9 @@ suite("ToolchainEnvironment", () => {
     const executable = process.platform === "win32" ? "dart.exe" : "dart";
     fs.mkdirSync(path.join(sdk, "bin"), { recursive: true });
     fs.writeFileSync(path.join(sdk, "bin", executable), "");
+    if (process.platform !== "win32") {
+      fs.chmodSync(path.join(sdk, "bin", executable), 0o755);
+    }
 
     const result = await resolveToolchainEnvironment(
       {
@@ -297,7 +309,7 @@ suite("ToolchainEnvironment", () => {
     assert.strictEqual(result.setting, "merry.dartSdkPath");
   });
 
-  test("inaccessible inherited PUB_CACHE is authoritative", async () => {
+  test("missing inherited PUB_CACHE is accepted when its parent is writable", async () => {
     const missingCache = path.join(root, "missing-cache");
     const result = await resolveToolchainEnvironment(
       {
@@ -309,12 +321,10 @@ suite("ToolchainEnvironment", () => {
       { runSdkCommand: async () => "" },
     );
 
-    assert.deepStrictEqual(result, {
-      kind: "pub-cache-unavailable",
-      source: "environment",
-      path: missingCache,
-      reason: "Directory does not exist",
-    });
+    assert.strictEqual(result.kind, "resolved");
+    if (result.kind !== "resolved") return;
+    assert.strictEqual(result.pubCache, missingCache);
+    assert.strictEqual(result.sources.pubCache, "environment");
   });
 
   test("inaccessible explicit Pub cache is rejected", async function () {
@@ -359,6 +369,47 @@ suite("ToolchainEnvironment", () => {
     assert.strictEqual(result.sources.pubCache, "home-default");
   });
 
+  test("missing explicit Pub cache is accepted when its parent is writable", async () => {
+    const cache = path.join(root, "new-cache");
+    const result = await resolveToolchainEnvironment(
+      {
+        ...baseInput("dart"),
+        merryPubCachePath: cache,
+        dartSdkPath: makeDartSdk("standalone"),
+      },
+      { runSdkCommand: async () => "" },
+    );
+
+    assert.strictEqual(result.kind, "resolved");
+    if (result.kind !== "resolved") return;
+    assert.strictEqual(result.pubCache, cache);
+    assert.strictEqual(result.sources.pubCache, "merry-setting");
+  });
+
+  test("missing default Pub cache rejects an inaccessible parent", async function () {
+    if (process.platform === "win32") this.skip();
+    const parent = path.join(root, "inaccessible-parent");
+    fs.mkdirSync(parent);
+    fs.chmodSync(parent, 0o000);
+    const result = await resolveToolchainEnvironment(
+      {
+        ...baseInput("dart"),
+        homeDirectory: path.join(parent, "home"),
+        merryPubCachePath: undefined,
+        dartSdkPath: makeDartSdk("standalone"),
+      },
+      { runSdkCommand: async () => "" },
+    );
+    fs.chmodSync(parent, 0o700);
+
+    assert.deepStrictEqual(result, {
+      kind: "pub-cache-unavailable",
+      source: "home-default",
+      path: path.join(parent, "home", ".pub-cache"),
+      reason: "Parent directory is not readable and writable",
+    });
+  });
+
   test("uses the Windows local application data Pub cache default", async () => {
     const localAppData = path.join(root, "local-app-data");
     const sdk = path.join(root, "standalone-win");
@@ -401,6 +452,85 @@ suite("ToolchainEnvironment", () => {
       result.environment["PATH"]?.split(path.delimiter)[0],
       sdkBin,
     );
+  });
+
+  test("preserves inherited Windows Path entries with canonical casing", async () => {
+    const sdk = path.join(root, "standalone-win");
+    fs.mkdirSync(path.join(sdk, "bin"), { recursive: true });
+    fs.writeFileSync(path.join(sdk, "bin", "dart.exe"), "");
+    const inherited = path.join(root, "inherited-bin");
+    const result = await resolveToolchainEnvironment(
+      {
+        ...baseInput("dart"),
+        platform: "win32",
+        dartSdkPath: sdk,
+        environment: { Path: inherited },
+      },
+      { runSdkCommand: async () => "" },
+    );
+
+    assert.strictEqual(result.kind, "resolved");
+    if (result.kind !== "resolved") return;
+    assert.strictEqual(result.environment["Path"], undefined);
+    assert.ok(result.environment["PATH"]?.includes(inherited));
+  });
+
+  test("discovers Dart from a case-insensitive Windows Path key", async () => {
+    const sdk = path.join(root, "path-sdk-win");
+    const sdkBin = path.join(sdk, "bin");
+    fs.mkdirSync(sdkBin, { recursive: true });
+    fs.writeFileSync(path.join(sdkBin, "dart.exe"), "");
+    const result = await resolveToolchainEnvironment(
+      {
+        ...baseInput("dart"),
+        platform: "win32",
+        environment: { Path: sdkBin },
+      },
+      { runSdkCommand: async () => "" },
+    );
+
+    assert.strictEqual(result.kind, "resolved");
+    if (result.kind !== "resolved") return;
+    assert.strictEqual(result.sources.dart, "path");
+    assert.ok(result.environment["PATH"]?.includes(sdkBin));
+  });
+
+  test("standalone Dart removes an inherited Flutter root", async () => {
+    const result = await resolveToolchainEnvironment(
+      {
+        ...baseInput("dart"),
+        dartSdkPath: makeDartSdk("standalone"),
+        environment: {
+          PATH: "",
+          FLUTTER_ROOT: makeFlutterSdk("inherited-flutter"),
+        },
+      },
+      { runSdkCommand: async () => "" },
+    );
+
+    assert.strictEqual(result.kind, "resolved");
+    if (result.kind !== "resolved") return;
+    assert.strictEqual(result.flutterRoot, undefined);
+    assert.strictEqual(result.environment["FLUTTER_ROOT"], undefined);
+  });
+
+  test("rejects a non-executable standalone Dart SDK", async function () {
+    if (process.platform === "win32") this.skip();
+    const sdk = makeDartSdk("non-executable");
+    fs.chmodSync(path.join(sdk, "bin", "dart"), 0o644);
+    const result = await resolveToolchainEnvironment(
+      {
+        ...baseInput("dart"),
+        merryDartSdkPath: sdk,
+      },
+      { runSdkCommand: async () => "" },
+    );
+
+    assert.deepStrictEqual(result, {
+      kind: "invalid-configuration",
+      setting: "merry.dartSdkPath",
+      reason: "Path is not a Dart or Flutter SDK root",
+    });
   });
 
   test("selected Flutter bin precedes Pub cache and inherited PATH", async () => {

@@ -64,7 +64,7 @@ export function inspectSdk(
     "bin",
     executable,
   );
-  if (fs.existsSync(flutterDart)) {
+  if (isRunnableFile(flutterDart, platform)) {
     return {
       root,
       dartExecutable: flutterDart,
@@ -73,7 +73,7 @@ export function inspectSdk(
     };
   }
   const standaloneDart = path.join(root, "bin", executable);
-  if (fs.existsSync(standaloneDart)) {
+  if (isRunnableFile(standaloneDart, platform)) {
     return { root, dartExecutable: standaloneDart, source };
   }
   return null;
@@ -81,11 +81,19 @@ export function inspectSdk(
 
 export function findOnPath(input: ToolchainResolverInput): SdkCandidate | null {
   const executable = input.platform === "win32" ? "dart.exe" : "dart";
-  const entries = input.environment["PATH"]?.split(path.delimiter) ?? [];
+  const pathKey =
+    input.platform === "win32"
+      ? Object.keys(input.environment).find(
+          (key) => key.toLowerCase() === "path",
+        )
+      : "PATH";
+  const entries = pathKey
+    ? (input.environment[pathKey]?.split(path.delimiter) ?? [])
+    : [];
   for (const entry of entries) {
     if (!entry) continue;
     const dartExecutable = path.join(entry, executable);
-    if (fs.existsSync(dartExecutable)) {
+    if (isRunnableFile(dartExecutable, input.platform)) {
       return {
         root: path.dirname(entry),
         dartExecutable,
@@ -94,6 +102,17 @@ export function findOnPath(input: ToolchainResolverInput): SdkCandidate | null {
     }
   }
   return null;
+}
+
+function isRunnableFile(filePath: string, platform: NodeJS.Platform): boolean {
+  try {
+    if (!fs.statSync(filePath).isFile()) return false;
+    if (platform !== "win32") fs.accessSync(filePath, fs.constants.X_OK);
+    return true;
+  } catch (error) {
+    if (error instanceof Error) return false;
+    throw error;
+  }
 }
 
 export function definedEnvironment(

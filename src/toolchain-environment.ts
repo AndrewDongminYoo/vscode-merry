@@ -135,14 +135,6 @@ function resolveCache(input: ToolchainResolverInput):
         : path.join(input.homeDirectory, ".pub-cache");
     source = "home-default";
   }
-  if (source !== "home-default" && !fs.existsSync(cachePath)) {
-    return {
-      kind: "pub-cache-unavailable",
-      source,
-      path: cachePath,
-      reason: "Directory does not exist",
-    };
-  }
   if (fs.existsSync(cachePath) && !fs.statSync(cachePath).isDirectory()) {
     return {
       kind: "pub-cache-unavailable",
@@ -151,20 +143,71 @@ function resolveCache(input: ToolchainResolverInput):
       reason: "Path is not a directory",
     };
   }
-  if (fs.existsSync(cachePath)) {
-    try {
-      fs.accessSync(cachePath, fs.constants.R_OK | fs.constants.W_OK);
-    } catch (error) {
-      if (!(error instanceof Error)) throw error;
-      return {
-        kind: "pub-cache-unavailable",
-        source,
-        path: cachePath,
-        reason: "Directory is not readable and writable",
-      };
-    }
+  const accessTarget = fs.existsSync(cachePath)
+    ? cachePath
+    : nearestExistingParent(cachePath);
+  if (!accessTarget) {
+    return {
+      kind: "pub-cache-unavailable",
+      source,
+      path: cachePath,
+      reason: "No existing parent directory is available",
+    };
+  }
+  try {
+    fs.accessSync(accessTarget, fs.constants.R_OK | fs.constants.W_OK);
+  } catch (error) {
+    if (!(error instanceof Error)) throw error;
+    return {
+      kind: "pub-cache-unavailable",
+      source,
+      path: cachePath,
+      reason: fs.existsSync(cachePath)
+        ? "Directory is not readable and writable"
+        : "Parent directory is not readable and writable",
+    };
   }
   return { kind: "resolved", path: cachePath, source };
+}
+
+function nearestExistingParent(target: string): string | null {
+  let candidate = path.dirname(target);
+  while (!fs.existsSync(candidate)) {
+    const parent = path.dirname(candidate);
+    if (parent === candidate) return null;
+    candidate = parent;
+  }
+  return fs.statSync(candidate).isDirectory() ? candidate : null;
+}
+
+function takeEnvironmentValue(
+  environment: Record<string, string>,
+  name: string,
+  caseInsensitive: boolean,
+): string | undefined {
+  const key = caseInsensitive
+    ? Object.keys(environment).find(
+        (candidate) => candidate.toLowerCase() === name.toLowerCase(),
+      )
+    : name;
+  if (!key) return undefined;
+  const value = environment[key];
+  if (key !== name) delete environment[key];
+  return value;
+}
+
+function deleteEnvironmentValue(
+  environment: Record<string, string>,
+  name: string,
+  caseInsensitive: boolean,
+): void {
+  if (!caseInsensitive) {
+    delete environment[name];
+    return;
+  }
+  for (const key of Object.keys(environment)) {
+    if (key.toLowerCase() === name.toLowerCase()) delete environment[key];
+  }
 }
 
 export async function resolveToolchainEnvironment(
@@ -234,11 +277,21 @@ export async function resolveToolchainEnvironment(
   if (cache.kind !== "resolved") return cache;
   const environment = definedEnvironment(input.environment);
   environment["PUB_CACHE"] = cache.path;
-  if (selected.flutterRoot) environment["FLUTTER_ROOT"] = selected.flutterRoot;
+  const caseInsensitive = input.platform === "win32";
+  if (selected.flutterRoot) {
+    environment["FLUTTER_ROOT"] = selected.flutterRoot;
+  } else {
+    deleteEnvironmentValue(environment, "FLUTTER_ROOT", caseInsensitive);
+  }
+  const inheritedPath = takeEnvironmentValue(
+    environment,
+    "PATH",
+    caseInsensitive,
+  );
   environment["PATH"] = buildPath(
     selected,
     cache.path,
-    environment["PATH"],
+    inheritedPath,
     input.platform,
   );
   const fingerprint = JSON.stringify([
