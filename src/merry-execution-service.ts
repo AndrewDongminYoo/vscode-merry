@@ -199,7 +199,7 @@ export class MerryExecutionService implements Disposable {
     const target = this.terminal;
     if (!target) return;
     target.show();
-    this.terminalBusy = true;
+    this.terminalBusy = target.shellIntegration !== undefined;
     target.sendText(
       formatTerminalCommand(
         info.launcherPath,
