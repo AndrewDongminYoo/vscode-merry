@@ -1,5 +1,6 @@
 import {
   type Disposable,
+  type Event,
   ShellExecution,
   Task,
   TaskGroup,
@@ -8,9 +9,10 @@ import {
   TaskScope,
 } from "vscode";
 
-import type { MerryCli } from "./cli-detector";
+import type { CliInfo } from "./cli-detector";
 import type { ScriptNode } from "./merry-parser";
 import type { MerryScriptService } from "./merry-script-service";
+import { executionShellForPlatform, formatShellCommand } from "./shell-command";
 
 export class MerryTaskProvider implements TaskProvider<Task>, Disposable {
   static readonly taskType = "merry";
@@ -20,18 +22,17 @@ export class MerryTaskProvider implements TaskProvider<Task>, Disposable {
 
   constructor(
     private readonly service: MerryScriptService,
-    private readonly getCli: () => MerryCli,
+    private readonly workspaceRoot: string,
+    private readonly getCliInfo: () => CliInfo | null,
+    private readonly refreshCliInfo: () => Promise<void>,
+    onDidChangeCliInfo: Event<void>,
   ) {
-    service.onDidChangeScripts(
-      () => {
-        this.cachedTasks = undefined;
-      },
-      this,
-      this.disposables,
-    );
+    service.onDidChangeScripts(this.invalidateCache, this, this.disposables);
+    onDidChangeCliInfo(this.invalidateCache, this, this.disposables);
   }
 
-  provideTasks(): Task[] {
+  async provideTasks(): Promise<Task[]> {
+    await this.refreshCliInfo();
     if (!this.cachedTasks) {
       this.cachedTasks = this.buildTasks();
     }
@@ -43,19 +44,40 @@ export class MerryTaskProvider implements TaskProvider<Task>, Disposable {
   }
 
   private buildTasks(): Task[] {
-    const cli = this.getCli();
+    const cliInfo = this.getCliInfo();
+    if (!cliInfo) return [];
     return collectLeaves(this.service.getNodes()).map((node) =>
-      this.nodeToTask(node, cli),
+      this.nodeToTask(node, cliInfo),
     );
   }
 
-  private nodeToTask(node: ScriptNode, cli: MerryCli): Task {
+  private nodeToTask(node: ScriptNode, cliInfo: CliInfo): Task {
+    const executionShell = executionShellForPlatform(process.platform);
     const task = new Task(
       { type: MerryTaskProvider.taskType, script: node.fullPath },
       TaskScope.Workspace,
       node.fullPath,
       MerryTaskProvider.taskType,
-      new ShellExecution(`${cli} run ${node.fullPath}`),
+      new ShellExecution(
+        formatShellCommand(
+          [cliInfo.launcherPath, "run", ...node.fullPath.split(/\s+/)],
+          executionShell.shell,
+          commandEnvironment(cliInfo.toolchain.environment),
+        ),
+        process.platform === "win32"
+          ? {
+              cwd: this.workspaceRoot,
+              env: cliInfo.toolchain.environment,
+              executable: "powershell.exe",
+              shellArgs: ["-NoLogo", "-NoProfile", "-Command"],
+            }
+          : {
+              cwd: this.workspaceRoot,
+              env: cliInfo.toolchain.environment,
+              executable: executionShell.shellPath,
+              shellArgs: ["-c"],
+            },
+      ),
     );
     task.detail = node.description ?? node.commands.join(" && ");
     task.group = resolveTaskGroup(node);
@@ -66,6 +88,20 @@ export class MerryTaskProvider implements TaskProvider<Task>, Disposable {
   dispose(): void {
     for (const d of this.disposables) d.dispose();
   }
+
+  private invalidateCache(): void {
+    this.cachedTasks = undefined;
+  }
+}
+
+function commandEnvironment(
+  environment: Readonly<Record<string, string>>,
+): Readonly<Record<string, string | null>> {
+  return {
+    PATH: environment["PATH"],
+    PUB_CACHE: environment["PUB_CACHE"],
+    FLUTTER_ROOT: environment["FLUTTER_ROOT"] ?? null,
+  };
 }
 
 /** Recursively collect all non-group (runnable) leaf nodes. */
