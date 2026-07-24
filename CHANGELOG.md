@@ -5,6 +5,24 @@ All notable changes to the **Merry Scripts** extension will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-07-24
+
+### Added
+
+- Workspace-aware Dart and Flutter SDK resolution supporting extension settings, Dart Code settings and commands, FVM, `FLUTTER_ROOT`, and inherited `PATH`.
+- Configurable Pub cache resolution through `merry.pubCachePath`, inherited `PUB_CACHE`, and platform defaults.
+
+### Changed
+
+- CLI detection, Explorer execution, VS Code Tasks, and Merry installation now share the same resolved Dart executable, Pub cache, launcher, and environment.
+- Multi-root workspaces now read folder-scoped Dart Code and Merry settings from the selected workspace folder.
+- Terminal and task commands now use explicit platform shells, absolute launchers, quoted arguments, and command-time environment restoration.
+
+### Fixed
+
+- External and read-only Pub caches, mixed-case Windows environment keys, relative PATH entries, Windows Flutter launchers, and standalone Dart environments are handled consistently.
+- Concurrent refreshes and repeated resolution failures no longer queue redundant detection commands or duplicate notifications.
+
 ## [0.2.0] - 2026-04-12
 
 ### Added
@@ -77,3 +95,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.1.2]: https://github.com/AndrewDongminYoo/vscode-merry/releases/tag/v0.1.2
 [0.1.3]: https://github.com/AndrewDongminYoo/vscode-merry/releases/tag/v0.1.3
 [0.2.0]: https://github.com/AndrewDongminYoo/vscode-merry/releases/tag/v0.2.0
+[0.3.0]: https://github.com/AndrewDongminYoo/vscode-merry/releases/tag/v0.3.0
