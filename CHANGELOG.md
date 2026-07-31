@@ -5,6 +5,19 @@ All notable changes to the **Merry Scripts** extension will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-07-31
+
+### Fixed
+
+- Running a script or installing the merry CLI no longer leaves the terminal idle.
+  0.3.0 restored the resolved environment on the command line itself, and a resolved `PATH` pushes that line past the 1024-byte limit a freshly opened terminal accepts, so everything past the limit — including the newline that submits the command — was discarded.
+  The environment now travels only through the terminal's own environment, which already carried it.
+- macOS terminals no longer open with the bash 3.2 deprecation notice before the script output.
+
+### Security
+
+- Updated `js-yaml` and pinned transitive overrides to remediate reported dependency vulnerabilities.
+
 ## [0.3.0] - 2026-07-24
 
 ### Added
@@ -96,3 +109,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.1.3]: https://github.com/AndrewDongminYoo/vscode-merry/releases/tag/v0.1.3
 [0.2.0]: https://github.com/AndrewDongminYoo/vscode-merry/releases/tag/v0.2.0
 [0.3.0]: https://github.com/AndrewDongminYoo/vscode-merry/releases/tag/v0.3.0
+[0.3.1]: https://github.com/AndrewDongminYoo/vscode-merry/releases/tag/v0.3.1
