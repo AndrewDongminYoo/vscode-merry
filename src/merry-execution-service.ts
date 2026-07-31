@@ -208,12 +208,14 @@ export class MerryExecutionService implements Disposable {
     if (!target) return;
     target.show();
     this.terminalBusy = target.shellIntegration !== undefined;
+    // The environment travels through `createTerminal({ env })`, never on the
+    // command line: a resolved PATH easily exceeds the 1024-byte canonical tty
+    // input limit, which silently truncates the line before it is submitted.
     target.sendText(
       formatTerminalCommand(
         info.launcherPath,
         scriptPath,
         this.terminalShell(),
-        commandEnvironment(info.toolchain.environment),
       ),
     );
   }
@@ -248,7 +250,6 @@ export class MerryExecutionService implements Disposable {
       formatShellCommand(
         [resolution.dartExecutable, "pub", "global", "activate", "merry"],
         this.terminalShell(),
-        commandEnvironment(resolution.environment),
       ),
     );
     if (!terminal.shellIntegration) {
@@ -379,16 +380,6 @@ function nearestExistingPath(target: string): string {
     candidate = parent;
   }
   return candidate;
-}
-
-function commandEnvironment(
-  environment: Readonly<Record<string, string>>,
-): Readonly<Record<string, string | null>> {
-  return {
-    PATH: environment["PATH"],
-    PUB_CACHE: environment["PUB_CACHE"],
-    FLUTTER_ROOT: environment["FLUTTER_ROOT"] ?? null,
-  };
 }
 
 function terminalEnvironment(

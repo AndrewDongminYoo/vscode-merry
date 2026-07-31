@@ -49,6 +49,20 @@ suite("MerryExecutionService", () => {
     );
   });
 
+  test("keeps the environment off the command line", () => {
+    // A resolved PATH exceeds the 1024-byte canonical tty input limit, which
+    // truncates the line sent to a freshly created terminal before submission.
+    const command = formatTerminalCommand(
+      "/cache/bin/merry",
+      "build",
+      "posix",
+    );
+    assert.ok(
+      !command.includes("PATH="),
+      "the environment must travel through terminal options, not the command",
+    );
+  });
+
   test("uses a known shell for each platform", () => {
     assert.deepStrictEqual(executionShellForPlatform("win32"), {
       shell: "powershell",
