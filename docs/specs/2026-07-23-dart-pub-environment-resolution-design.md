@@ -47,10 +47,10 @@ It is preferred over wrapping every command with `fvm` because FVM already expos
 
 Add two optional settings:
 
-| Setting | Meaning |
-| --- | --- |
-| `merry.dartSdkPath` | Absolute or workspace-relative path to a standalone Dart SDK or Flutter SDK root. |
-| `merry.pubCachePath` | Absolute or workspace-relative path to the Pub cache root. |
+| Setting              | Meaning                                                                           |
+| -------------------- | --------------------------------------------------------------------------------- |
+| `merry.dartSdkPath`  | Absolute or workspace-relative path to a standalone Dart SDK or Flutter SDK root. |
+| `merry.pubCachePath` | Absolute or workspace-relative path to the Pub cache root.                        |
 
 Both settings accept `~`, `${workspaceFolder}`, and `${env:NAME}` substitutions.
 An unresolved environment substitution makes that configured value invalid and produces a diagnostic; it does not silently fall through.
@@ -238,18 +238,18 @@ The detected status message includes the CLI launcher and the source of the Dart
 
 ## Files Expected to Change During Implementation
 
-| Action | Path | Responsibility |
-| --- | --- | --- |
-| Create | `src/toolchain-environment.ts` | Pure SDK, Pub cache, substitution, and environment resolution. |
-| Create | `src/test/toolchain-environment.test.ts` | Resolution precedence and platform path tests. |
-| Modify | `src/cli-detector.ts` | Detect using a resolved environment and return an absolute launcher. |
-| Modify | `src/test/cli-detector.test.ts` | Detection and fallback regression coverage. |
-| Modify | `src/extension.ts` | Read configuration, own resolution lifecycle, and run/install with the resolved context. |
-| Modify | `src/merry-task-provider.ts` | Build tasks from the resolved execution context. |
-| Modify | `src/test/merry-task-provider.test.ts` | Assert executable, arguments, environment, and cache invalidation. |
-| Modify | `src/test/integration.test.ts` | Verify configuration-change wiring without relying on installed SDKs. |
-| Modify | `package.json` | Declare the two optional Merry settings. |
-| Modify | `CLAUDE.md` | Replace the obsolete detector/execution flow with the resolved environment flow. |
+| Action | Path                                     | Responsibility                                                                           |
+| ------ | ---------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Create | `src/toolchain-environment.ts`           | Pure SDK, Pub cache, substitution, and environment resolution.                           |
+| Create | `src/test/toolchain-environment.test.ts` | Resolution precedence and platform path tests.                                           |
+| Modify | `src/cli-detector.ts`                    | Detect using a resolved environment and return an absolute launcher.                     |
+| Modify | `src/test/cli-detector.test.ts`          | Detection and fallback regression coverage.                                              |
+| Modify | `src/extension.ts`                       | Read configuration, own resolution lifecycle, and run/install with the resolved context. |
+| Modify | `src/merry-task-provider.ts`             | Build tasks from the resolved execution context.                                         |
+| Modify | `src/test/merry-task-provider.test.ts`   | Assert executable, arguments, environment, and cache invalidation.                       |
+| Modify | `src/test/integration.test.ts`           | Verify configuration-change wiring without relying on installed SDKs.                    |
+| Modify | `package.json`                           | Declare the two optional Merry settings.                                                 |
+| Modify | `CLAUDE.md`                              | Replace the obsolete detector/execution flow with the resolved environment flow.         |
 
 The implementation is expected to touch ten files.
 Before implementation, the plan must identify whether extension activation wiring can be kept below this scope.

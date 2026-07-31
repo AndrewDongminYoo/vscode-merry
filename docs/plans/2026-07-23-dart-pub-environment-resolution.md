@@ -27,21 +27,21 @@ Keep `extension.ts` as command/provider wiring so it does not absorb another res
 
 ## File Map
 
-| Action | Path | Responsibility |
-| --- | --- | --- |
-| Create | `src/toolchain-environment.ts` | Pure trust, substitution, SDK, Pub cache, `PATH`, and fingerprint resolution. |
-| Create | `src/test/toolchain-environment.test.ts` | Temporary-filesystem tests for precedence, substitutions, trust, and portability. |
-| Modify | `src/cli-detector.ts` | Detect packages with the resolved absolute Dart executable and Pub environment. |
-| Modify | `src/test/cli-detector.test.ts` | Preserve parser tests and add execution-ready launcher tests. |
-| Create | `src/merry-execution-service.ts` | VS Code configuration adapter, context lifecycle, terminal/install behavior, and diagnostics. |
-| Create | `src/test/merry-execution-service.test.ts` | Context lifecycle and shell-command formatting tests. |
-| Modify | `src/merry-task-provider.ts` | Build strongly quoted tasks from an execution-ready context. |
-| Modify | `src/test/merry-task-provider.test.ts` | Assert executable, arguments, environment, and cache invalidation. |
-| Modify | `src/extension.ts` | Wire `MerryExecutionService` to commands, status UI, and task provider. |
-| Modify | `src/test/integration.test.ts` | Verify trust/configuration wiring and existing command registration. |
-| Modify | `.vscode-test.mjs` | Run the currently omitted task-provider suite and the two new suites in the correct workspace mode. |
-| Modify | `package.json` | Declare `merry.dartSdkPath` and `merry.pubCachePath`. |
-| Modify | `CLAUDE.md` | Document the resolved detection/execution flow. |
+| Action | Path                                       | Responsibility                                                                                      |
+| ------ | ------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| Create | `src/toolchain-environment.ts`             | Pure trust, substitution, SDK, Pub cache, `PATH`, and fingerprint resolution.                       |
+| Create | `src/test/toolchain-environment.test.ts`   | Temporary-filesystem tests for precedence, substitutions, trust, and portability.                   |
+| Modify | `src/cli-detector.ts`                      | Detect packages with the resolved absolute Dart executable and Pub environment.                     |
+| Modify | `src/test/cli-detector.test.ts`            | Preserve parser tests and add execution-ready launcher tests.                                       |
+| Create | `src/merry-execution-service.ts`           | VS Code configuration adapter, context lifecycle, terminal/install behavior, and diagnostics.       |
+| Create | `src/test/merry-execution-service.test.ts` | Context lifecycle and shell-command formatting tests.                                               |
+| Modify | `src/merry-task-provider.ts`               | Build strongly quoted tasks from an execution-ready context.                                        |
+| Modify | `src/test/merry-task-provider.test.ts`     | Assert executable, arguments, environment, and cache invalidation.                                  |
+| Modify | `src/extension.ts`                         | Wire `MerryExecutionService` to commands, status UI, and task provider.                             |
+| Modify | `src/test/integration.test.ts`             | Verify trust/configuration wiring and existing command registration.                                |
+| Modify | `.vscode-test.mjs`                         | Run the currently omitted task-provider suite and the two new suites in the correct workspace mode. |
+| Modify | `package.json`                             | Declare `merry.dartSdkPath` and `merry.pubCachePath`.                                               |
+| Modify | `CLAUDE.md`                                | Document the resolved detection/execution flow.                                                     |
 
 `src/extension.ts` is already 276 lines.
 New resolution and execution lifecycle behavior must live in the two new focused modules rather than increasing that file's responsibility.
@@ -198,10 +198,7 @@ export type ToolchainSource =
   | "flutter-root"
   | "path";
 
-export type PubCacheSource =
-  | "merry-setting"
-  | "environment"
-  | "home-default";
+export type PubCacheSource = "merry-setting" | "environment" | "home-default";
 
 export interface ToolchainResolverInput {
   readonly workspaceRoot: string;
@@ -507,7 +504,7 @@ new ShellExecution(
     cwd: this.workspaceRoot,
     env: cliInfo.toolchain.environment,
   },
-)
+);
 ```
 
 Keep task names, details, groups, source, and leaf collection unchanged.
@@ -650,10 +647,7 @@ Remove `terminal`, `terminalBusy`, `activeCli`, `statusBar`, `runInTerminal()`, 
 After loading `MerryScriptService`, create and initialize:
 
 ```typescript
-const executionService = new MerryExecutionService(
-  context,
-  workspaceRoot,
-);
+const executionService = new MerryExecutionService(context, workspaceRoot);
 await executionService.initialize();
 ```
 
@@ -722,8 +716,7 @@ git commit -m "feat: share Merry execution context"
 Add an integration test that reads the extension manifest and asserts:
 
 ```typescript
-const properties =
-  extension.packageJSON.contributes.configuration.properties;
+const properties = extension.packageJSON.contributes.configuration.properties;
 assert.strictEqual(properties["merry.dartSdkPath"].type, "string");
 assert.strictEqual(properties["merry.dartSdkPath"].scope, "window");
 assert.strictEqual(properties["merry.pubCachePath"].type, "string");
