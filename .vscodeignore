@@ -12,6 +12,7 @@
 **/CLAUDE.md
 **/AGENTS.md
 **/.gitignore
+**/*.map
 pnpm-workspace.yaml
 tsconfig.json
 eslint.config.mjs
