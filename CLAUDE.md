@@ -33,13 +33,22 @@ To run tests in Extension Development Host, press `F5` in VS Code.
 
 Runtime source files use **kebab-case** naming by convention. Tests intentionally live under `src/test/` rather than a top-level `test/` directory to match the current VS Code extension / VSIX workflow.
 
-| File                            | Role                                                                     |
-| ------------------------------- | ------------------------------------------------------------------------ |
-| `src/extension.ts`              | `activate`/`deactivate`, command registration, terminal runner           |
-| `src/cli-detector.ts`           | Detects `merry`/`derry` CLI via `dart pub global list` (merry preferred) |
-| `src/merry-parser.ts`           | YAML parsing → `ScriptNode[]` tree                                       |
-| `src/script-item.ts`            | `vscode.TreeItem` subclass                                               |
-| `src/merry-scripts-provider.ts` | `TreeDataProvider<ScriptItem>` with `FileSystemWatcher`                  |
+| File                              | Role                                                                                     |
+| --------------------------------- | ---------------------------------------------------------------------------------------- |
+| `src/extension.ts`                | `activate`/`deactivate`, command registration, wiring of the services below              |
+| `src/commands.ts`                 | `merry.*` command id constants                                                           |
+| `src/merry-parser.ts`             | YAML parsing → `ScriptNode[]` tree                                                       |
+| `src/merry-script-service.ts`     | Script state, reload, and `FileSystemWatcher` ownership                                  |
+| `src/merry-scripts-provider.ts`   | `TreeDataProvider<ScriptItem>` projecting the script service                             |
+| `src/script-item.ts`              | `vscode.TreeItem` subclass                                                               |
+| `src/merry-codelens-provider.ts`  | CodeLens run actions inside the resolved scripts YAML file                               |
+| `src/merry-task-provider.ts`      | `TaskProvider` exposing leaf scripts as VS Code tasks                                    |
+| `src/merry-execution-service.ts`  | Toolchain refresh, terminal runner, install prompt, status bar                           |
+| `src/shell-command.ts`            | Per-platform shell selection and argument quoting                                        |
+| `src/cli-detector.ts`             | Detects `merry`/`derry` via `dart pub global list`, filesystem fallback, merry preferred |
+| `src/toolchain-environment.ts`    | Resolves the Dart SDK, Pub cache, and execution environment                              |
+| `src/toolchain-paths.ts`          | Path resolution and SDK inspection helpers used by the resolver                          |
+| `src/vscode-toolchain-adapter.ts` | Reads workspace settings and feeds the resolver                                          |
 
 ### merry YAML parsing rules (critical)
 
@@ -93,7 +102,7 @@ Untrusted workspaces render scripts but do not execute SDK selection commands, D
 
 ### FileSystemWatcher strategy
 
-`MerryScriptsProvider` always watches `pubspec.yaml`. When `scripts:` points to an external file, a second watcher is created dynamically and replaced on each reload.
+`MerryScriptService` always watches `pubspec.yaml`. When `scripts:` points to an external file, a second watcher is created dynamically and replaced on each reload. `MerryScriptsProvider` owns no watchers; it re-fires `onDidChangeTreeData` when the service reports a change.
 
 ### Extension entry point
 
@@ -106,9 +115,14 @@ Tests live in `src/test/` and run inside an actual VS Code instance via `@vscode
 - `src/test/integration.test.ts` exercises activation, command registration, provider behavior, and tree rendering against the committed `test-workspace/` fixture.
 - `src/test/merry-parser.test.ts` covers parser semantics and YAML edge cases.
 - `src/test/cli-detector.test.ts` covers `dart pub global list` parsing and merry-vs-derry preference.
+- `src/test/toolchain-environment.test.ts` covers SDK and Pub cache resolution across settings, FVM, `FLUTTER_ROOT`, and `PATH`.
+- `src/test/merry-execution-service.test.ts` covers command formatting, shell selection, and refresh coalescing.
+- `src/test/merry-task-provider.test.ts` covers task construction, grouping, and cache invalidation.
+- `src/test/merry-script-service.test.ts` covers script state and reload behavior.
+- `src/test/merry-codelens-provider.test.ts` covers lens placement in the resolved scripts YAML file.
 - `src/test/extension.test.ts` is still mostly the scaffold sample test and should not be treated as sufficient coverage by itself.
 
-## Key constraints (from `PLAN.md`)
+## Key constraints
 
 - No fallback execution when merry CLI is not installed — show an install prompt only (Phase 2).
 - No script editing UI in current scope.

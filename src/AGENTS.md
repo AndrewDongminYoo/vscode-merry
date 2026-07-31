@@ -7,19 +7,29 @@
 
 ## Structure
 
-- `extension.ts`: activation, command registration, install prompt, terminal execution.
-- `cli-detector.ts`: detect `merry` or `derry`; prefer `merry`; resolve `binPath`.
+- `extension.ts`: activation, command registration, service wiring.
+- `commands.ts`: `merry.*` command id constants.
+- `cli-detector.ts`: detect `merry` or `derry`; prefer `merry`; resolve `launcherPath`.
 - `merry-parser.ts`: parse `pubspec.yaml` and external script files into `ScriptNode[]`.
-- `merry-scripts-provider.ts`: `TreeDataProvider`, async reload, `FileSystemWatcher` management.
+- `merry-script-service.ts`: script state, async reload, `FileSystemWatcher` management.
+- `merry-scripts-provider.ts`: `TreeDataProvider` projecting the script service.
 - `script-item.ts`: `TreeItem` projection for script/group nodes.
+- `merry-codelens-provider.ts`: run lenses inside the resolved scripts YAML file.
+- `merry-task-provider.ts`: `TaskProvider` exposing leaf scripts as VS Code tasks.
+- `merry-execution-service.ts`: toolchain refresh, terminal execution, install prompt, status bar.
+- `shell-command.ts`: per-platform shell selection and argument quoting.
+- `toolchain-environment.ts` / `toolchain-paths.ts` / `vscode-toolchain-adapter.ts`: Dart SDK and Pub cache resolution, and the VS Code settings adapter feeding it.
 - `test/`: colocated unit and integration suites.
 
 ## Where to look
 
 - New command or config work: `extension.ts` and `package.json`
-- CLI install / detection behavior: `cli-detector.ts`
+- CLI detection behavior: `cli-detector.ts`
+- SDK / Pub cache resolution and install prompts: `toolchain-environment.ts`, `merry-execution-service.ts`
+- Terminal execution, quoting, shell choice: `merry-execution-service.ts`, `shell-command.ts`
 - Script metadata, hook detection, nested path rules: `merry-parser.ts`
-- Refresh behavior, watcher bugs, tree shape: `merry-scripts-provider.ts`
+- Refresh behavior, watcher bugs: `merry-script-service.ts`
+- Tree shape: `merry-scripts-provider.ts`
 - Icons, tooltips, collapsible state: `script-item.ts`
 
 ## Conventions

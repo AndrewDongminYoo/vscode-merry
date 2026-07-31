@@ -26,14 +26,21 @@
 
 ## Where to look
 
-- Command wiring and terminal behavior: `src/extension.ts`
+- Command wiring and service composition: `src/extension.ts`
+- Terminal behavior, install prompt, status bar: `src/merry-execution-service.ts`
+- SDK and Pub cache resolution: `src/toolchain-environment.ts`, `src/vscode-toolchain-adapter.ts`
 - CLI detection and merry-vs-derry preference: `src/cli-detector.ts`
 - YAML parsing and script tree semantics: `src/merry-parser.ts`
-- Tree provider, reload logic, file watchers: `src/merry-scripts-provider.ts`
+- Reload logic and file watchers: `src/merry-script-service.ts`
+- Tree provider: `src/merry-scripts-provider.ts`
 - Tree item presentation: `src/script-item.ts`
+- VS Code Tasks integration: `src/merry-task-provider.ts`
+- CodeLens in YAML files: `src/merry-codelens-provider.ts`
 - End-to-end extension behavior: `src/test/integration.test.ts`
 - Parser regression coverage: `src/test/merry-parser.test.ts`
 - CLI parser coverage: `src/test/cli-detector.test.ts`
+- Toolchain resolution coverage: `src/test/toolchain-environment.test.ts`
+- Execution, task, script-service, and CodeLens coverage: the matching `src/test/*.test.ts` suites
 
 ## Commands
 

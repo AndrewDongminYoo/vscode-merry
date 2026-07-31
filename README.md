@@ -226,6 +226,18 @@ Controls what happens when you run another script:
 - `always`: reuse the existing Merry terminal when possible
 - `ask`: show a Quick Pick so you can choose each time
 
+### `merry.dartSdkPath`
+
+Dart or Flutter SDK root used for Merry detection and execution.
+Supports `~`, `${workspaceFolder}`, and `${env:NAME}`.
+Leave empty to resolve from Dart Code settings, FVM, `FLUTTER_ROOT`, or `PATH`.
+
+### `merry.pubCachePath`
+
+Pub cache root used for Merry detection and execution.
+Supports `~`, `${workspaceFolder}`, and `${env:NAME}`.
+Leave empty to resolve from `PUB_CACHE` or the platform default.
+
 ## Current scope and limitations
 
 - Multi-root workspace behavior is not finalized yet.
