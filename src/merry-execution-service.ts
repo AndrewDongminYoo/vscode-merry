@@ -388,6 +388,9 @@ function terminalEnvironment(
   return {
     ...environment,
     FLUTTER_ROOT: environment["FLUTTER_ROOT"] ?? null,
+    // Terminals run the pinned `/bin/bash`, which on macOS is Apple's bash 3.2
+    // and greets every interactive session with a zsh migration notice.
+    BASH_SILENCE_DEPRECATION_WARNING: "1",
   };
 }
 
