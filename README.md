@@ -79,7 +79,7 @@ When `merry.reuseTerminal` is set to `ask`, the extension lets you decide whethe
 
 If neither `merry` nor `derry` is installed, the extension shows a warning and gives you a direct path to install the CLI.
 
-### VS Code Tasks integration
+### VS Code Tasks list
 
 ![VS Code Tasks integration](assets/readme/05-vscode-tasks-integration.png)
 
