@@ -13,7 +13,6 @@
 - `src/AGENTS.md`: runtime code ownership and file-level guidance.
 - `src/test/AGENTS.md`: test strategy, suite boundaries, fixture usage.
 - `test-workspace/AGENTS.md`: integration fixture contract.
-- `.serena/memories/`: compact persistent context for future sessions.
 
 ## Structure
 
