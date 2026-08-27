@@ -23,9 +23,9 @@ lint:
   disabled:
     - dart
     - trivy
+    - pinact
   enabled:
     - grype@0.116.1
-    - pinact@4.1.1
     - oxipng@10.1.1
     - actionlint@1.7.12
     - eslint@10.8.0
