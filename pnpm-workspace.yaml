@@ -3,11 +3,12 @@ allowBuilds:
   esbuild: true
   keytar: true
 overrides:
+  "@humanfs/node@0": ^0.16.8 # GHSA-p498-v437-472g
   brace-expansion@<1.1.16: ^1.1.16 # GHSA-3jxr-9vmj-r5cp
   brace-expansion@>=2.0.0 <2.1.2: ^2.1.2 # GHSA-3jxr-9vmj-r5cp
   brace-expansion@>=3.0.0 <5.0.7: ^5.0.7 # GHSA-3jxr-9vmj-r5cp
   diff@>=6.0.0 <8.0.3: ">=8.0.3"
-  fast-uri@>=3.0.0 <=3.1.4: ^3.1.5 # GHSA-7p8r-x3mc-p8w7
+  fast-uri@3: ^3.1.6 # GHSA-7p8r-x3mc-p8w7, GHSA-5jgf-p345-68v8, GHSA-f65p-4m7j-42xc, GHSA-fph4-wmhf-6fwf, GHSA-jqff-g426-hqxp
   form-data@>=4.0.0 <4.0.6: ^4.0.6 # GHSA-hmw2-7cc7-3qxx
   linkify-it@<=5.0.1: ^5.0.2 # GHSA-v245-v573-v5vm
   markdown-it@<=14.1.1: ^14.2.0 # GHSA-6v5v-wf23-fmfq
