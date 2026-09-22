@@ -16,16 +16,14 @@ runtimes:
 # This is the section where you manage your linters. (https://docs.trunk.io/check/configuration)
 lint:
   ignore:
-    - linters: [osv-scanner]
-      paths: [pnpm-lock.yaml]
     - linters: [markdownlint]
       paths: [CHANGELOG.md]
   disabled:
+    - grype
     - dart
     - trivy
     - pinact
   enabled:
-    - grype@0.117.0
     - oxipng@10.2.0
     - actionlint@1.7.12
     - eslint@10.9.1
