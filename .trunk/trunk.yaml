@@ -22,8 +22,9 @@ lint:
     - grype
     - dart
     - trivy
-    - pinact
   enabled:
+    - pinact@4.1.1:
+        commands: [lint, upgrade]
     - oxipng@10.2.0
     - actionlint@1.7.12
     - eslint@10.9.1
