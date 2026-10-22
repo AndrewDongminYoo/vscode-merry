@@ -36,3 +36,9 @@ updates:
         applies-to: security-updates
         patterns:
           - "*"
+    # Type minor versions must move with the supported VS Code engine.
+    ignore:
+      - dependency-name: "@types/vscode"
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
