@@ -1,0 +1,3 @@
+[[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+reason = "braces@3.0.3 has no compatible patched release as of 2026-10-05. Dependency path: fast-glob@3.3.3 > micromatch@4.0.8 > braces@3.0.3. Reachability evidence: scripts/check-wiki.ts resolves sources entries with literal fs.stat lookups; remaining fast-glob patterns are fixed. pnpm wiki:check:test passes 23 tests, including nested-brace input rejection without stack overflow. Approved by Andrew on 2026-10-05. Re-evaluation owner: Andrew; reassess when a patched release becomes available or glob input handling changes."
