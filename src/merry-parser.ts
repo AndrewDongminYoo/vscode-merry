@@ -1,6 +1,7 @@
 import * as fs from "fs";
-import * as yaml from "js-yaml";
 import * as path from "path";
+
+import { loadYaml } from "./yaml-loader";
 
 /** Regex matching merry meta-keys like (scripts), (description), (workdir), etc. */
 const META_KEY_RE = /^\(\w+\)$/;
@@ -229,7 +230,7 @@ export async function parseMerryScripts(
 
   let doc: YamlMap | null;
   try {
-    doc = yaml.load(pubspecContent) as YamlMap | null;
+    doc = loadYaml(pubspecContent) as YamlMap | null;
   } catch (error) {
     console.error("Failed to load yaml file", error);
     return null;
@@ -255,7 +256,7 @@ export async function parseMerryScripts(
     }
     let externalDoc: YamlMap | null;
     try {
-      externalDoc = yaml.load(externalContent) as YamlMap | null;
+      externalDoc = loadYaml(externalContent) as YamlMap | null;
     } catch (error) {
       console.error("Failed to load external yaml file", error);
       return null;

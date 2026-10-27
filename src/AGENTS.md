@@ -11,6 +11,7 @@
 - `commands.ts`: `merry.*` command id constants.
 - `cli-detector.ts`: detect `merry` or `derry`; prefer `merry`; resolve `launcherPath`.
 - `merry-parser.ts`: parse `pubspec.yaml` and external script files into `ScriptNode[]`.
+- `yaml-loader.ts`: the one place that calls `js-yaml` `load`, with an explicit schema so js-yaml 4 and 5 read files alike.
 - `merry-script-service.ts`: script state, async reload, `FileSystemWatcher` management.
 - `merry-scripts-provider.ts`: `TreeDataProvider` projecting the script service.
 - `script-item.ts`: `TreeItem` projection for script/group nodes.

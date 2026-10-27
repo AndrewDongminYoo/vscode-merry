@@ -1,6 +1,5 @@
 import * as cp from "child_process";
 import * as fs from "fs";
-import * as yaml from "js-yaml";
 import * as os from "os";
 import * as path from "path";
 import { Uri, workspace } from "vscode";
@@ -10,6 +9,7 @@ import {
   type ToolchainResolution,
   type ToolchainResolverInput,
 } from "./toolchain-environment";
+import { loadYaml } from "./yaml-loader";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -19,7 +19,7 @@ function classifyWorkspace(workspaceRoot: string): "flutter" | "dart" {
   const pubspecPath = path.join(workspaceRoot, "pubspec.yaml");
   if (!fs.existsSync(pubspecPath)) return "dart";
   try {
-    const document: unknown = yaml.load(fs.readFileSync(pubspecPath, "utf8"));
+    const document: unknown = loadYaml(fs.readFileSync(pubspecPath, "utf8"));
     if (!isRecord(document)) return "dart";
     for (const key of ["dependencies", "dev_dependencies"]) {
       const dependencies = document[key];

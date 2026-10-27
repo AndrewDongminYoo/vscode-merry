@@ -367,4 +367,89 @@ scripts:
     assert.ok(release);
     assert.strictEqual(release.fullPath, "build android release");
   });
+
+  // ── Anchors, aliases and merge keys ────────────────────────────
+  // js-yaml 5 changed its default schema and dropped `<<`, so these must hold on both majors.
+
+  const ANCHOR_SCRIPTS = `
+build: &build
+  - flutter pub get
+  - flutter build apk
+release: *build
+`;
+
+  const MERGE_SCRIPTS = `
+base: &base
+  (description): Shared description
+  (workdir): packages/app
+  (scripts): flutter test
+unit:
+  <<: *base
+  (description): Unit tests
+integration:
+  <<: *base
+  (scripts): flutter test integration_test
+`;
+
+  function indent(content: string): string {
+    return content
+      .split("\n")
+      .map((line) => (line ? `  ${line}` : line))
+      .join("\n");
+  }
+
+  function assertAnchorScripts(nodes: ScriptNode[]): void {
+    const release = nodes.find((n) => n.label === "release");
+    assert.ok(release);
+    assert.deepStrictEqual(release.commands, [
+      "flutter pub get",
+      "flutter build apk",
+    ]);
+  }
+
+  function assertMergeScripts(nodes: ScriptNode[]): void {
+    const unit = nodes.find((n) => n.label === "unit");
+    assert.ok(unit);
+    assert.deepStrictEqual(unit.commands, ["flutter test"]);
+    assert.strictEqual(unit.description, "Unit tests");
+    assert.strictEqual(unit.workdir, "packages/app");
+
+    const integration = nodes.find((n) => n.label === "integration");
+    assert.ok(integration);
+    assert.deepStrictEqual(integration.commands, [
+      "flutter test integration_test",
+    ]);
+    assert.strictEqual(integration.description, "Shared description");
+    assert.strictEqual(integration.workdir, "packages/app");
+  }
+
+  test("resolves anchors and aliases in inline scripts", async () => {
+    const p = writePubspec(`name: example\nscripts:${indent(ANCHOR_SCRIPTS)}`);
+    const result = await parseMerryScripts(p);
+    assert.ok(result);
+    assertAnchorScripts(result.nodes);
+  });
+
+  test("resolves << merge keys in inline scripts", async () => {
+    const p = writePubspec(`name: example\nscripts:${indent(MERGE_SCRIPTS)}`);
+    const result = await parseMerryScripts(p);
+    assert.ok(result);
+    assertMergeScripts(result.nodes);
+  });
+
+  test("resolves anchors and aliases in an external scripts file", async () => {
+    fs.writeFileSync(path.join(tmpDir, "merry.yaml"), ANCHOR_SCRIPTS, "utf8");
+    const p = writePubspec("name: example\nscripts: merry.yaml\n");
+    const result = await parseMerryScripts(p);
+    assert.ok(result);
+    assertAnchorScripts(result.nodes);
+  });
+
+  test("resolves << merge keys in an external scripts file", async () => {
+    fs.writeFileSync(path.join(tmpDir, "merry.yaml"), MERGE_SCRIPTS, "utf8");
+    const p = writePubspec("name: example\nscripts: merry.yaml\n");
+    const result = await parseMerryScripts(p);
+    assert.ok(result);
+    assertMergeScripts(result.nodes);
+  });
 });
