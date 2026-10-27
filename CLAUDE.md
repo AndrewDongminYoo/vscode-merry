@@ -38,6 +38,7 @@ Runtime source files use **kebab-case** naming by convention. Tests intentionall
 | `src/extension.ts`                | `activate`/`deactivate`, command registration, wiring of the services below              |
 | `src/commands.ts`                 | `merry.*` command id constants                                                           |
 | `src/merry-parser.ts`             | YAML parsing → `ScriptNode[]` tree                                                       |
+| `src/yaml-loader.ts`              | `loadYaml()`: explicit js-yaml schema (anchors, aliases, `<<` merge) for js-yaml 4 and 5 |
 | `src/merry-script-service.ts`     | Script state, reload, and `FileSystemWatcher` ownership                                  |
 | `src/merry-scripts-provider.ts`   | `TreeDataProvider<ScriptItem>` projecting the script service                             |
 | `src/script-item.ts`              | `vscode.TreeItem` subclass                                                               |
