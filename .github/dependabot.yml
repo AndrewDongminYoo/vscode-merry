@@ -42,8 +42,9 @@ updates:
         update-types:
           - version-update:semver-major
           - version-update:semver-minor
-      # The account follows Node LTS and accepts type packages up to major 25.
-      # Version 26 stays blocked until Node 26 is LTS (#12).
+      # Major updates of the Node type package are manual: the account follows Node LTS and accepts
+      # types up to major 25, and Node 26 is not LTS yet (#12).
+      # update-types limits this to version updates; security updates still open.
       - dependency-name: "@types/node"
-        versions:
-          - ">=26"
+        update-types:
+          - version-update:semver-major
