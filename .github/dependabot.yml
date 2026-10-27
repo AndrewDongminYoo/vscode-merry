@@ -42,3 +42,9 @@ updates:
         update-types:
           - version-update:semver-major
           - version-update:semver-minor
+      # Major updates of the Node type package are manual: the account follows Node LTS and accepts
+      # types up to major 25, and Node 26 is not LTS yet (#12).
+      # update-types limits this to version updates; security updates still open.
+      - dependency-name: "@types/node"
+        update-types:
+          - version-update:semver-major
