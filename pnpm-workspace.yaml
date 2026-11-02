@@ -7,6 +7,19 @@ minimumReleaseAgeExclude:
   - "@azure/msal-node@7.1.0"
 
 overrides:
+  # GHSA-g3hv-75wg-m249 and GHSA-3g3m-2fjr-6pw4 have no patched older major.
+  # Limit cross-major fixes to consumers using retained named/class APIs.
+  "@eslint/config-array@0>minimatch": ^11.0.1
+  "@typescript-eslint/typescript-estree@8>minimatch": ^11.0.1
+  "@vscode/test-cli@0>glob": ^14.0.2
+  "@vscode/test-cli@0>minimatch": ^11.0.1
+  "@vscode/vsce@4>minimatch": ^11.0.1
+  "eslint@10>minimatch": ^11.0.1
+  "mocha@11>glob": ^14.0.2
+  "mocha@11>minimatch": ^11.0.1
+  "npm-run-all@4>minimatch": ^11.0.1
+  "test-exclude@8>glob": ^14.0.2
+  "test-exclude@8>minimatch": ^11.0.1
   "@azure/msal-node@>=5.0.0-beta.0 <7.1.0": ^7.1.0 # GHSA-xcx6-jx8p-x3h5
   "@humanfs/node@0": ^0.16.8 # GHSA-p498-v437-472g
   brace-expansion@<1.1.18: ^1.1.18 # GHSA-3jxr-9vmj-r5cp, GHSA-mh99-v99m-4gvg, GHSA-rgw5-rvv9-x895
